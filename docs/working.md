@@ -12,6 +12,7 @@
 - 离线单测 14 passed；GPU 全片计数 skipped（依赖本地视频与权重）
 - 隐私扫描：tracked 文件无本机绝对路径、无 1Password 引用；`alice@example.com` 为 pyproject 占位作者邮箱
 - 视频、权重、xlsx、debug mp4 纳入 gitignore，全片结果以 `examples/` 作为发表合同
+- 将 120 秒 L1 debug 画面收入 `docs/assets/`，README 用作过线链路的可视化验证（非全片精度合同）
 
 ### 2026-07-28
 

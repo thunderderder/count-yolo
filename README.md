@@ -20,6 +20,16 @@ Fixed-camera intersection counting with YOLO tracking and **layered evaluation**
 
 L3（entry/exit 多边形 + 转向查表）代码里有骨架，示例视频上完整轨迹经常是 0，所以本仓库不把它写成已验证能力。
 
+## L1 过线计数画面
+
+120 秒冒烟，用来看计数链路是否在工作：黄线是标定的近场计数线，绿框为跟踪中，橙框为已过线计入。这是可视化验证，不是全片 22 分钟的精度合同；全片数字仍以表格和 `examples/` 为准。
+
+![L1 近场过线计数（120 秒）](docs/assets/l1_line_count_demo.mp4)
+
+静帧：
+
+![计数线与跟踪框](docs/assets/l1_line_count_poster.jpg)
+
 ## 当前能做什么
 
 已实现：标定一条计数线 → YOLO + ByteTrack 过线计数 → JSON → 和人工调查表比对。
@@ -66,13 +76,14 @@ configs/            示例路口标定
 ground_truth/       人工调查对照
 examples/           已发表的全片 JSON（无本机路径）
 docs/               prd / rfc / working / test
+docs/assets/        L1 120 秒 overlay 演示与静帧
 ```
 
 根目录的 `count_traffic.py`、`annotate_line.py`、`compare_ground_truth.py` 是兼容入口。隔一段时间回来看 [`阶段总结.md`](阶段总结.md)；交给别人看 [`交接说明.md`](交接说明.md)。
 
 ## Privacy
 
-This repository is designed to be publishable with only fake examples. `.env.example` uses placeholders. Videos, weights, Excel templates, and runtime `output/` are gitignored. Published JSON fixtures store filenames only, not local absolute paths.
+This repository is designed to be publishable with only fake examples. `.env.example` uses placeholders. Weights, Excel templates, and runtime `output/` are gitignored. The 120-second clip in `docs/assets/` is a published field-camera demo for the L1 overlay; other videos stay local. Published JSON fixtures store filenames only, not local absolute paths.
 
 ## License
 

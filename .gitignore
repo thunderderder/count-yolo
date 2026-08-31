@@ -23,6 +23,7 @@ models/*.onnx
 *.MP4
 *.avi
 *.mkv
+!docs/assets/*.mp4
 *.xlsx
 *.xls
 
