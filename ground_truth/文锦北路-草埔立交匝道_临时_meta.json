@@ -1,0 +1,53 @@
+{
+  "intersection_name": "文锦北路-草埔立交匝道（临时）",
+  "video_file": "文锦北路-草埔立交匝道临时.MP4",
+  "video_duration_min": 22,
+  "video_fps": 24,
+  "video_resolution": "1920x1080",
+  "target_stat_period": "高峰小时（1 小时当量）",
+  "source": "人工调查表截图（现状交通运行状况）",
+  "source_note": "表中高峰小时流量单位为 pcu/h；由约 22 分钟视频人工计数外推至 1 小时。外推系数约为 60/22 ≈ 2.73。",
+  "video_quality_note": "路口远景、桥墩遮挡；不适合 L3 全矩阵验收，仅作 L1 冒烟测试素材。",
+  "evaluation_tiers": {
+    "L1": {
+      "description": "近场过线计数，单方向无转向",
+      "primary_key": {"entry_direction": "南", "movement": "直行"},
+      "implied_count_22min": 1533.0,
+      "tolerance_pct": 15,
+      "tolerance_pct_first_pass": 20,
+      "method": "count_traffic.py --mode line --line L1_南直行"
+    },
+    "L2": {
+      "description": "单走廊 O-D，可选探索",
+      "optional_keys": [{"entry_direction": "东", "movement": "左转", "implied_count_22min": 103.4}]
+    },
+    "L3": {
+      "description": "四进口全矩阵",
+      "applicable": false,
+      "reason": "远景目标过小 + 桥墩断轨"
+    }
+  },
+  "scaling": {
+    "video_count_to_peak_hour_pcu_h": "count_22min * 60 / 22",
+    "peak_hour_pcu_h_to_video_count": "peak_hour_pcu_h * 22 / 60",
+    "scale_factor": 2.727272727272727
+  },
+  "comparison_usage": {
+    "wenjin_caopu_video": "L1 only: compare line count for 南/直行 vs implied_count_22min=1533",
+    "quality_video_l3": "Full matrix vs implied_count_22min per row, or scaled to peak_hour_pcu_h"
+  },
+  "active_movements": 6,
+  "missing_movements_note": "匝道临时路口，非标准十字口；表中仅含 6 条有效进口×转向组合，无车型拆分",
+  "rows": [
+    {"entry_direction": "东", "movement": "左转", "peak_hour_pcu_h": 282, "implied_count_22min": 103.4, "tier": "L2_optional"},
+    {"entry_direction": "东", "movement": "直行", "peak_hour_pcu_h": 6, "implied_count_22min": 2.2, "tier": null},
+    {"entry_direction": "西", "movement": "直行", "peak_hour_pcu_h": 213, "implied_count_22min": 78.1, "tier": null},
+    {"entry_direction": "西", "movement": "右转", "peak_hour_pcu_h": 15, "implied_count_22min": 5.5, "tier": null},
+    {"entry_direction": "南", "movement": "直行", "peak_hour_pcu_h": 4181, "implied_count_22min": 1533.0, "tier": "L1_primary"},
+    {"entry_direction": "北", "movement": "直行", "peak_hour_pcu_h": 4155, "implied_count_22min": 1523.5, "tier": null}
+  ],
+  "totals": {
+    "peak_hour_pcu_h_sum": 8852,
+    "implied_count_22min_sum": 3245.7
+  }
+}

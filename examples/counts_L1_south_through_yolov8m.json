@@ -1,0 +1,49 @@
+{
+  "intersection": "文锦北路-草埔立交匝道（临时）",
+  "mode": "line",
+  "evaluation_level": "L1",
+  "line_name": "L1_南直行",
+  "video": "sample.mp4",
+  "model": "yolov8m.pt",
+  "vehicle_classes": {
+    "2": "car",
+    "3": "motorcycle",
+    "5": "bus",
+    "7": "truck"
+  },
+  "start_sec": 0.0,
+  "end_sec": null,
+  "duration_sec": 1346.01,
+  "fps": 23.976023976023978,
+  "vid_stride": 1,
+  "frames_processed": 32272,
+  "detections_total": 384316,
+  "line": [
+    [309, 798],
+    [1646, 794]
+  ],
+  "direction": "near_to_far",
+  "counts": [
+    {
+      "entry_direction": "南",
+      "movement": "直行",
+      "entry": "南进口",
+      "total": 1304,
+      "by_class": {
+        "car": 1132,
+        "truck_small": 51,
+        "bus": 119,
+        "motorcycle": 2
+      }
+    }
+  ],
+  "counts_raw": {
+    "南进口|直行": {
+      "car": 1132,
+      "truck_small": 51,
+      "bus": 119,
+      "motorcycle": 2
+    }
+  },
+  "note": "Full-video yolov8m run. Absolute local paths stripped for publishable fixtures."
+}
