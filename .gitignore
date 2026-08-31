@@ -1,0 +1,38 @@
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+*.pyc
+*.pyo
+dist/
+build/
+*.egg-info/
+
+# Weights, videos, Excel templates, debug artifacts
+models/*.pt
+models/*.pth
+models/*.onnx
+*.mp4
+*.MP4
+*.avi
+*.mkv
+*.xlsx
+*.xls
+
+# Runtime output (keep directory via .gitkeep)
+output/*
+!output/.gitkeep
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

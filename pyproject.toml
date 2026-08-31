@@ -1,0 +1,38 @@
+[project]
+name = "count-yolo"
+version = "0.1.0"
+description = "Layered YOLO traffic counting for intersection surveys (L1 line / L3 OD). Field PoC, not a product."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Thunder", email = "alice@example.com" }]
+dependencies = [
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+runtime = [
+    "ultralytics>=8.4",
+    "supervision>=0.20",
+    "opencv-python>=4.8",
+    "openpyxl>=3.1",
+    "matplotlib>=3.8",
+    "lap",
+]
+dev = [
+    "pytest>=8.0",
+]
+
+[project.scripts]
+count-yolo = "count_yolo.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
