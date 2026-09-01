@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>count-yolo 控制台</title>
+  <style>
+    :root { --bg:#0f1419; --card:#1a2332; --text:#e7ecf3; --muted:#9aa7b8; --accent:#3d9eff; --line:#2a3545; --warn:#e8b84a; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: "Segoe UI", system-ui, sans-serif; background:var(--bg); color:var(--text); }
+    header { padding:16px 24px; border-bottom:1px solid var(--line); display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+    header h1 { margin:0; font-size:18px; font-weight:600; }
+    main { display:grid; grid-template-columns: 320px 1fr; gap:16px; padding:16px; min-height:calc(100vh - 57px); }
+    .panel { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; }
+    label { display:block; font-size:12px; color:var(--muted); margin:10px 0 4px; }
+    input, select, textarea { width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--line); background:#0d1218; color:var(--text); }
+    textarea { min-height:72px; resize:vertical; }
+    button { cursor:pointer; border:none; border-radius:6px; padding:8px 12px; background:var(--accent); color:#fff; font-weight:600; }
+    button.secondary { background:#2a3545; color:var(--text); }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+    .lines { display:flex; flex-wrap:wrap; gap:8px; min-height:48px; padding:8px; border:1px solid var(--line); border-radius:6px; }
+    .line-tag { display:inline-block; padding:4px 10px; border-radius:999px; background:#243044; font-size:13px; }
+    video, img { width:100%; border-radius:8px; background:#000; margin-top:8px; }
+    .artifact { padding:10px 0; border-bottom:1px solid var(--line); font-size:13px; }
+    .local-path { display:block; margin:6px 0; padding:6px 8px; background:#0d1218; border-radius:6px; font-size:11px; word-break:break-all; color:var(--muted); }
+    .artifact-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
+    .artifact-actions button { padding:4px 10px; font-size:12px; }
+    .muted { color:var(--muted); font-size:12px; }
+    pre { background:#0d1218; border:1px solid var(--line); border-radius:8px; padding:12px; overflow:auto; max-height:240px; font-size:12px; white-space:pre-wrap; }
+    .legend span { display:inline-block; margin-right:12px; font-size:12px; }
+    .legend .c { color:#ffa500; } .legend .t { color:#0f0; }
+    .banner { background:#1f2a1a; border:1px solid #3a4a2a; color:#d8e6c8; border-radius:8px; padding:12px 14px; margin-bottom:12px; font-size:13px; line-height:1.55; }
+    .banner.warn { background:#2a2418; border-color:#4a4020; color:#f0e2b8; }
+    .steps { margin:8px 0 0; padding-left:18px; }
+    .steps li { margin:6px 0; }
+    .hidden { display:none !important; }
+    @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>count-yolo 控制台</h1>
+    <span class="muted">标定弹出 OpenCV 窗口；全量计数进度见下方日志</span>
+  </header>
+  <main>
+    <section class="panel">
+      <div id="noJobBanner" class="banner warn hidden">
+        还没有任何 Job。点「新建」创建第一个任务（命名如 <code>2026-路口名_调查项_0901</code>）。
+      </div>
+
+      <label>任务 Job</label>
+      <select id="jobSelect"></select>
+      <div class="row">
+        <button type="button" id="btnReload" class="secondary">刷新</button>
+        <button type="button" id="btnNew" class="secondary">新建</button>
+      </div>
+
+      <label>视频路径 video</label>
+      <input id="video" placeholder="videos/xxx.MP4 或本机绝对路径" />
+
+      <label>断面名称（标定用，逗号分隔）</label>
+      <input id="lineNames" placeholder="L1_主路,L1_匝道,L1_右路" />
+
+      <div class="row">
+        <button type="button" id="btnAnnotate">标定断面</button>
+        <button type="button" id="btnRedraw" class="secondary">重绘</button>
+      </div>
+      <p id="annotateHint" class="muted">填写视频与断面名称后点「标定断面」，本机会弹出 OpenCV 画线窗口。</p>
+
+      <label>几何 config（标定后自动写入）</label>
+      <input id="config" placeholder="configs/某路口.json" />
+
+      <label>已标定断面（每次标定会覆盖 config 中的旧线，计数时全部统计）</label>
+      <div class="lines" id="linesBox"></div>
+
+      <label>设备 device</label>
+      <select id="device"></select>
+      <p id="deviceHint" class="muted">正在检测 GPU…</p>
+
+      <label>
+        <input type="checkbox" id="preview30s" style="width:auto; margin-right:8px;" checked />
+        试跑 30 秒（勾选仅处理前 30s；不勾则全片计数）
+      </label>
+
+      <label>
+        <input type="checkbox" id="ebikeEnabled" style="width:auto; margin-right:8px;" />
+        启用电动自行车识别（额外用 ebike 权重再跑一遍，每断面多一个 debug 视频）
+      </label>
+
+      <label>备注 note</label>
+      <textarea id="note"></textarea>
+
+      <div class="row">
+        <button type="button" id="btnSave">保存 Job</button>
+        <button type="button" id="btnRun" disabled>试跑 30s</button>
+        <button type="button" id="btnStop" class="secondary" disabled>停止</button>
+      </div>
+      <p id="runHint" class="muted"></p>
+
+      <p class="muted" style="margin-top:12px;">
+        等价 CLI：<code id="cliHint"></code>
+      </p>
+      <pre id="runLog">（运行日志）</pre>
+    </section>
+
+    <section class="panel">
+      <div id="onboardBanner" class="banner hidden">
+        <strong>首次使用流程</strong>
+        <ol class="steps">
+          <li>填写本机视频路径与断面名称（如 <code>L1_主路,L1_匝道</code>）</li>
+          <li>点「标定断面」→ 弹出 OpenCV 窗口，左键两点画线，按 <code>n</code> 确认</li>
+          <li>标定完成后回到本页刷新，勾选断面，播放标定预览片验收</li>
+          <li>线位不对可点「重绘」重新标定</li>
+          <li>确认无误后点「全量计数」</li>
+        </ol>
+      </div>
+
+      <h2 style="margin:0 0 8px; font-size:16px;">标定验收</h2>
+      <div class="legend">
+        <span class="c">■ 已计数</span>
+        <span class="t">■ 跟踪中</span>
+        <span class="muted">（v1 仅两色）</span>
+      </div>
+      <p id="overlayPlaceholder" class="muted">填写视频并完成标定后，这里会显示叠线静帧。</p>
+      <img id="overlayImg" class="hidden" alt="line overlay" />
+
+      <h2 style="margin:24px 0 8px; font-size:16px;">输出文件</h2>
+      <p id="outputDirHint" class="muted">计数完成后，输出在 job 目录下。</p>
+      <div class="row" style="margin-top:8px;">
+        <button type="button" id="btnOpenOutputDir" class="secondary" disabled>打开输出文件夹</button>
+      </div>
+      <div id="artifactList" class="muted">尚无输出文件。</div>
+    </section>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let currentJob = "";
+    let lineCountCache = 0;
+    let deviceInfo = null;
+    let annotatePollTimer = null;
+
+    async function api(path, opts) {
+      const res = await fetch(path, opts);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || res.statusText);
+      }
+      const ct = res.headers.get("content-type") || "";
+      if (ct.includes("application/json")) return res.json();
+      return res;
+    }
+
+    function parseLineNames(text) {
+      return text.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+
+    function defaultConfigPath() {
+      return currentJob ? `configs/${currentJob}.json` : "configs/_empty.json";
+    }
+
+    function updateCliHint() {
+      const id = currentJob || "YOUR_JOB";
+      const ebike = $("ebikeEnabled").checked ? "（+ ebike 第二遍）" : "";
+      const mode = $("preview30s").checked ? "试跑30s" : "全片";
+      $("cliHint").textContent = `run.ps1 run-job --job ${id} (${mode})${ebike}`;
+      $("btnRun").textContent = $("preview30s").checked ? "试跑 30s" : "全量计数";
+    }
+
+    function previewSecondsValue() {
+      return $("preview30s").checked ? 30 : null;
+    }
+
+    function updateRunState(linesCount) {
+      const video = $("video").value.trim();
+      const ready = !!currentJob && !!video && linesCount > 0;
+      $("btnRun").disabled = !ready;
+      if (!video) {
+        $("runHint").textContent = "请先填写视频路径。";
+      } else if (linesCount === 0) {
+        $("runHint").textContent = "尚未标定断面，请先点「标定断面」。";
+      } else {
+        $("runHint").textContent = $("preview30s").checked
+          ? `将统计全部 ${linesCount} 条断面。可先试跑 30 秒验收。`
+          : `将统计全部 ${linesCount} 条断面，开始全量计数。`;
+      }
+    }
+
+    function showOnboarding(show) {
+      $("onboardBanner").classList.toggle("hidden", !show);
+    }
+
+    async function loadDeviceOptions(preferred) {
+      deviceInfo = await api("/api/device");
+      const sel = $("device");
+      sel.innerHTML = "";
+      if (deviceInfo.cuda_available && deviceInfo.devices.length) {
+        for (const dev of deviceInfo.devices) {
+          const opt = document.createElement("option");
+          opt.value = dev.id;
+          opt.textContent = `GPU ${dev.id} — ${dev.name}`;
+          sel.appendChild(opt);
+        }
+        const cpuOpt = document.createElement("option");
+        cpuOpt.value = "cpu";
+        cpuOpt.textContent = "CPU（较慢）";
+        sel.appendChild(cpuOpt);
+      } else {
+        const cpuOpt = document.createElement("option");
+        cpuOpt.value = "cpu";
+        cpuOpt.textContent = "CPU";
+        sel.appendChild(cpuOpt);
+      }
+      const autoOpt = document.createElement("option");
+      autoOpt.value = "auto";
+      autoOpt.textContent = "auto（自动检测）";
+      sel.appendChild(autoOpt);
+
+      const pick = preferred || deviceInfo.recommended || "cpu";
+      if ([...sel.options].some((o) => o.value === pick)) {
+        sel.value = pick;
+      } else {
+        sel.value = deviceInfo.recommended || "cpu";
+      }
+
+      const hint = $("deviceHint");
+      if (deviceInfo.cuda_available) {
+        hint.textContent = deviceInfo.message;
+        hint.classList.remove("warn");
+      } else {
+        hint.textContent = deviceInfo.message;
+        hint.classList.add("warn");
+        if (!preferred || preferred === "auto" || preferred === "0") {
+          sel.value = "cpu";
+        }
+      }
+    }
+
+    async function loadJobs() {
+      const data = await api("/api/jobs");
+      const sel = $("jobSelect");
+      sel.innerHTML = "";
+      $("noJobBanner").classList.toggle("hidden", data.jobs.length > 0);
+
+      for (const id of data.jobs) {
+        const opt = document.createElement("option");
+        opt.value = id; opt.textContent = id;
+        sel.appendChild(opt);
+      }
+      if (!data.jobs.length) {
+        const opt = document.createElement("option");
+        opt.value = ""; opt.textContent = "（无 job，请新建）";
+        sel.appendChild(opt);
+        clearPreviewPanels();
+        showOnboarding(true);
+        updateCliHint();
+        updateRunState(0);
+        return;
+      }
+      currentJob = data.jobs[0];
+      sel.value = currentJob;
+      await loadJob(currentJob);
+    }
+
+    function clearPreviewPanels() {
+      $("overlayImg").classList.add("hidden");
+      $("overlayPlaceholder").classList.remove("hidden");
+      $("artifactList").textContent = "尚无输出文件。";
+      $("outputDirHint").textContent = "计数完成后，输出在 job 目录下。";
+      $("btnOpenOutputDir").disabled = true;
+    }
+
+    async function openLocalFile(jobId, name) {
+      await api(`/api/jobs/${encodeURIComponent(jobId)}/open-local`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+    }
+
+    async function openOutputFolder(jobId) {
+      await api(`/api/jobs/${encodeURIComponent(jobId)}/open-local`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folder: true }),
+      });
+    }
+
+    async function loadJob(id) {
+      if (!id) {
+        clearPreviewPanels();
+        showOnboarding(true);
+        updateRunState(0);
+        return;
+      }
+      currentJob = id;
+      const job = await api(`/api/jobs/${encodeURIComponent(id)}`);
+      $("video").value = job.video || "";
+      $("config").value = job.config || defaultConfigPath();
+      await loadDeviceOptions(job.device || deviceInfo?.recommended);
+      $("ebikeEnabled").checked = !!job.ebike_enabled;
+      $("preview30s").checked = job.preview_seconds != null && job.preview_seconds > 0;
+      $("note").value = job.note || "";
+      if (job.lines && job.lines.length) {
+        $("lineNames").value = job.lines.join(",");
+      }
+      lineCountCache = await renderCalibratedLines(id);
+      await loadOverlay(id);
+      await refreshArtifacts(id);
+      updateCliHint();
+      const needsOnboard = !job.video || lineCountCache === 0;
+      showOnboarding(needsOnboard);
+      updateRunState(lineCountCache);
+    }
+
+    async function loadOverlay(id) {
+      const video = $("video").value.trim();
+      if (!video || lineCountCache === 0) {
+        $("overlayImg").classList.add("hidden");
+        $("overlayPlaceholder").textContent = lineCountCache === 0
+          ? "完成标定后，这里会显示叠线静帧。"
+          : "填写视频路径后，可预览叠线静帧。";
+        $("overlayPlaceholder").classList.remove("hidden");
+        return;
+      }
+      try {
+        const url = `/api/jobs/${encodeURIComponent(id)}/overlay.jpg?frame=1440&ts=${Date.now()}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(await res.text());
+        $("overlayImg").src = url;
+        $("overlayImg").classList.remove("hidden");
+        $("overlayPlaceholder").classList.add("hidden");
+      } catch (e) {
+        $("overlayImg").classList.add("hidden");
+        $("overlayPlaceholder").textContent = "暂无法生成叠线图（可能尚未标定或视频路径无效）。";
+        $("overlayPlaceholder").classList.remove("hidden");
+      }
+    }
+
+    async function fetchConfigLines(id) {
+      const data = await api(`/api/jobs/${encodeURIComponent(id)}/lines`);
+      return data.lines || [];
+    }
+
+    async function syncJobLinesFromConfig(id) {
+      const lines = await fetchConfigLines(id);
+      if (!lines.length) return lines;
+      const job = await api(`/api/jobs/${encodeURIComponent(id)}`);
+      $("lineNames").value = lines.join(",");
+      await api(`/api/jobs/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...job, lines }),
+      });
+      return lines;
+    }
+
+    async function renderCalibratedLines(id) {
+      const box = $("linesBox");
+      box.innerHTML = "";
+      let lines = [];
+      try {
+        lines = await fetchConfigLines(id);
+      } catch (e) {
+        box.innerHTML = `<span class="muted">config 尚无断面（标定后自动出现）。</span>`;
+        return 0;
+      }
+      if (!lines.length) {
+        box.innerHTML = `<span class="muted">尚无断面。填写断面名称后点「标定断面」。</span>`;
+        return 0;
+      }
+      for (const name of lines) {
+        const tag = document.createElement("span");
+        tag.className = "line-tag";
+        tag.textContent = name;
+        box.appendChild(tag);
+      }
+      return lines.length;
+    }
+
+    async function saveJob() {
+      const id = $("jobSelect").value || prompt("新 Job 名称（如 2026-文锦北路_南直行_0901）");
+      if (!id) return;
+      const config = $("config").value.trim() || defaultConfigPath();
+      const lineNames = parseLineNames($("lineNames").value);
+      const configLines = await fetchConfigLines(id);
+      const body = {
+        video: $("video").value.trim(),
+        config,
+        lines: configLines.length ? configLines : lineNames,
+        model: "8m",
+        device: $("device").value,
+        start: 0,
+        ebike_enabled: $("ebikeEnabled").checked,
+        preview_seconds: previewSecondsValue(),
+        note: $("note").value.trim(),
+      };
+      await api(`/api/jobs/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      await loadJobs();
+      $("jobSelect").value = id;
+      await loadJob(id);
+    }
+
+    async function startAnnotate(redraw) {
+      const id = $("jobSelect").value;
+      if (!id) return alert("请先选择或新建 Job");
+      const video = $("video").value.trim();
+      if (!video) return alert("请先填写视频路径");
+      const lines = parseLineNames($("lineNames").value);
+      if (!lines.length) return alert("请填写至少一个断面名称（逗号分隔）");
+
+      if (redraw && lineCountCache > 0) {
+        const ok = confirm("将覆盖当前 config 中的断面线，是否重绘？");
+        if (!ok) return;
+      }
+
+      const config = $("config").value.trim() || defaultConfigPath();
+      $("config").value = config;
+      $("annotateHint").textContent = "正在启动 OpenCV 标定窗口，请切到弹出的窗口操作…";
+      $("btnAnnotate").disabled = true;
+      $("btnRedraw").disabled = true;
+
+      try {
+        const res = await api(`/api/jobs/${encodeURIComponent(id)}/annotate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ video, config, lines, frame: 1440 }),
+        });
+        if (res.config) $("config").value = res.config;
+        $("runLog").textContent = "标定已启动，请在 OpenCV 窗口画线。\n操作：左键两点 → n 确认 → 全部画完自动保存。\n";
+        pollAnnotate(id);
+      } catch (e) {
+        $("annotateHint").textContent = `标定启动失败：${e.message}`;
+        $("btnAnnotate").disabled = false;
+        $("btnRedraw").disabled = false;
+      }
+    }
+
+    async function pollAnnotate(id) {
+      if (annotatePollTimer) clearInterval(annotatePollTimer);
+      annotatePollTimer = setInterval(async () => {
+        const st = await api("/api/annotate/status");
+        $("runLog").textContent = st.log_tail || "(等待标定输出…)";
+        if (!st.running) {
+          clearInterval(annotatePollTimer);
+          annotatePollTimer = null;
+          $("btnAnnotate").disabled = false;
+          $("btnRedraw").disabled = false;
+          if (st.exit_code === 0) {
+            $("annotateHint").textContent = "标定完成，已覆盖写入 config。请查看右侧预览验收。";
+            await syncJobLinesFromConfig(id);
+          } else {
+            const tail = (st.log_tail || "").trim();
+            const lastLine = tail ? tail.split(/\r?\n/).filter(Boolean).pop() : "";
+            $("annotateHint").textContent = lastLine
+              ? `标定失败：${lastLine}`
+              : "标定未保存（可能中途按 q 取消）。可点「重绘」再试。";
+          }
+          await loadJob(id);
+        }
+      }, 1500);
+    }
+
+    async function refreshArtifacts(id) {
+      const data = await api(`/api/jobs/${encodeURIComponent(id)}/artifacts`);
+      const list = $("artifactList");
+      list.innerHTML = "";
+      if (!data.files.length) {
+        list.textContent = "尚无输出。完成标定并计数后，这里会列出本地文件。";
+        $("btnOpenOutputDir").disabled = true;
+        return;
+      }
+      $("outputDirHint").textContent = data.output_dir_absolute || data.output_dir;
+      $("btnOpenOutputDir").disabled = false;
+      $("btnOpenOutputDir").onclick = () => openOutputFolder(id);
+
+      const priority = { video: 0, json: 1, image: 2, yaml: 3, other: 4 };
+      const files = [...data.files].sort((a, b) => {
+        const pa = priority[a.kind] ?? 9;
+        const pb = priority[b.kind] ?? 9;
+        if (pa !== pb) return pa - pb;
+        return a.name.localeCompare(b.name);
+      });
+
+      for (const f of files) {
+        const div = document.createElement("div");
+        div.className = "artifact";
+        const label = f.kind === "video" ? "视频" : f.kind === "json" ? "结果" : f.name;
+        div.innerHTML = `<div><strong>${f.name}</strong> <span class="muted">(${label})</span></div>`;
+        const pathEl = document.createElement("code");
+        pathEl.className = "local-path";
+        pathEl.textContent = f.absolute;
+        div.appendChild(pathEl);
+        const actions = document.createElement("div");
+        actions.className = "artifact-actions";
+        const openBtn = document.createElement("button");
+        openBtn.type = "button";
+        openBtn.className = "secondary";
+        openBtn.textContent = "本机打开";
+        openBtn.addEventListener("click", () => openLocalFile(id, f.name).catch((e) => alert(e.message)));
+        actions.appendChild(openBtn);
+        if (f.kind === "video") {
+          const hint = document.createElement("span");
+          hint.className = "muted";
+          hint.textContent = "（浏览器内可能无法播放，请用本机播放器）";
+          actions.appendChild(hint);
+        }
+        div.appendChild(actions);
+        list.appendChild(div);
+      }
+    }
+
+    async function stopRun() {
+      try {
+        await api("/api/run/stop", { method: "POST" });
+        $("runHint").textContent = "已发送停止请求。";
+        $("btnStop").disabled = true;
+        $("btnRun").disabled = false;
+      } catch (e) {
+        $("runHint").textContent = `停止失败：${e.message}`;
+      }
+    }
+
+    async function runJob() {
+      const id = $("jobSelect").value;
+      if (!id) return alert("请先选择或保存 Job");
+      if ($("btnRun").disabled) return alert("请先填写视频、完成标定。");
+      await saveJob();
+      await api(`/api/jobs/${encodeURIComponent(id)}/run`, { method: "POST" });
+      $("runLog").textContent = "已启动…\n";
+      $("btnStop").disabled = false;
+      pollRun(id);
+    }
+
+    async function pollRun(id) {
+      $("runHint").textContent = $("preview30s").checked
+        ? "30 秒试跑进行中…"
+        : "全量计数进行中（全片可能需数十分钟，GPU 有占用即正常）…";
+      $("btnRun").disabled = true;
+      $("btnStop").disabled = false;
+      const timer = setInterval(async () => {
+        const st = await api("/api/run/status");
+        const tail = st.log_tail || "(等待日志输出…)";
+        $("runLog").textContent = st.running ? `【运行中】\n${tail}` : tail;
+        if (!st.running) {
+          clearInterval(timer);
+          $("btnRun").disabled = false;
+          $("btnStop").disabled = true;
+          if (st.exit_code === 0) {
+            $("runHint").textContent = "计数完成，可在右侧用「本机打开」查看 debug 视频与 counts JSON。";
+          } else {
+            const last = tail.split(/\r?\n/).filter(Boolean).pop() || "";
+            $("runHint").textContent = last ? `计数失败：${last}` : `计数失败，退出码 ${st.exit_code}`;
+          }
+          await refreshArtifacts(id);
+          await loadJob(id);
+        }
+      }, 2000);
+    }
+
+    $("jobSelect").addEventListener("change", (e) => loadJob(e.target.value));
+    $("btnReload").addEventListener("click", () => loadJob($("jobSelect").value));
+    $("btnSave").addEventListener("click", saveJob);
+    $("btnRun").addEventListener("click", runJob);
+    $("btnStop").addEventListener("click", stopRun);
+    $("preview30s").addEventListener("change", () => { updateCliHint(); updateRunState(lineCountCache); });
+    $("btnAnnotate").addEventListener("click", () => startAnnotate(false));
+    $("btnRedraw").addEventListener("click", () => startAnnotate(true));
+    $("ebikeEnabled").addEventListener("change", updateCliHint);
+    $("video").addEventListener("input", () => { updateCliHint(); updateRunState(lineCountCache); });
+    $("config").addEventListener("input", updateCliHint);
+    $("btnNew").addEventListener("click", async () => {
+      const id = prompt("新 Job 名称", "2026-场景_调查项_0901");
+      if (!id) return;
+      await loadDeviceOptions();
+      await api(`/api/jobs/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          video: "",
+          config: `configs/${id}.json`,
+          lines: [],
+          model: "8m",
+          device: deviceInfo?.recommended || "auto",
+          ebike_enabled: false,
+          preview_seconds: 30,
+          note: "",
+        }),
+      });
+      await loadJobs();
+      $("jobSelect").value = id;
+      await loadJob(id);
+    });
+
+    (async () => {
+      await loadDeviceOptions();
+      await loadJobs();
+    })().catch((e) => { $("runLog").textContent = e.message; });
+  </script>
+</body>
+</html>

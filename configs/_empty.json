@@ -1,0 +1,10 @@
+{
+  "name": "（未配置路口）",
+  "note": "首次使用：用 annotate 标定计数线后，line_counting 会写入本文件",
+  "line_counting": {},
+  "zones": {
+    "entry": {},
+    "exit": {}
+  },
+  "movement_map": {}
+}

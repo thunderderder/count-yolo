@@ -1,6 +1,6 @@
 # AGENTS.md — count_yolo
 
-交叉口视频流量计数的局部规则。接手本目录时先读本文，再读 `README.md`。
+交叉口视频流量计数的局部规则。接手本目录时先读本文；**AI 会话**另读 [`AI交接说明.md`](AI交接说明.md)，再读 `README.md`。
 
 ## 这个项目是什么
 
@@ -47,7 +47,7 @@ python -m pytest tests/ -q
 
 | 入口 | 说明 |
 |------|------|
-| `.\run.ps1 8m \| ebike \| count \| annotate \| compare` | 日常入口 |
+| `.\run.ps1 8m \| 8m-all \| ebike \| ebike-all \| count \| count-all \| annotate \| compare` | 日常入口 |
 | `python count_traffic.py` | 计数兼容入口 |
 | `python annotate_line.py` | 标定兼容入口 |
 | `python compare_ground_truth.py` | GT 比对兼容入口 |
@@ -57,7 +57,9 @@ python -m pytest tests/ -q
 - 对外说明：`README.md`
 - 需求：`docs/prd.md`
 - 架构：`docs/rfc.md`
+- **本地 Web / Job 模型（待实现）**：`docs/rfc_local_console.md`
 - changelog：`docs/working.md`
 - 测试策略：`docs/test.md`
 - 搁置恢复：`阶段总结.md`
-- 新人接手：`交接说明.md`
+- 人类接手：`交接说明.md`
+- **AI 接手：`AI交接说明.md`**

@@ -1,0 +1,11 @@
+video: 文锦北路-草埔立交匝道临时.MP4
+config: configs/文锦北路-草埔立交匝道_临时.json
+lines:
+  - L1_主路
+  - L1_匝道
+  - L1_右路
+model: 8m
+device: auto
+start: 0
+ebike_enabled: false
+note: 三断面示例任务

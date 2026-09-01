@@ -6,7 +6,9 @@
 #
 # Examples:
 #   .\run.ps1 annotate --image output\frame_ref.jpg
+#   .\run.ps1 annotate --lines L1_主路,L1_匝道,L1_右路 --image output\frame_ref.jpg
 #   .\run.ps1 8m --mode line --line L1_南直行 --device 0
+#   .\run.ps1 8m-all --device 0
 #   .\run.ps1 ebike --mode line --line L1_南直行 --device 0 --max-seconds 120
 #   .\run.ps1 compare --counts examples\counts_L1_south_through_yolov8m.json --level L1
 
@@ -74,6 +76,44 @@ function Get-PresetInfo([string]$Name) {
     }
 }
 
+function Expand-CountAllPreset([string]$Preset, [string[]]$ArgsList) {
+    $info = Get-PresetInfo $Preset
+    if ($null -eq $info) {
+        throw "unknown model preset: $Preset (use 8m or ebike)"
+    }
+    if (-not (Test-Path $info.Model)) {
+        if ($Preset -eq "8m") {
+            Write-Host "yolov8m.pt missing locally; ultralytics may download it on first run." -ForegroundColor Yellow
+        } else {
+            throw "model file missing: $($info.Model) (set COUNT_YOLO_EBIKE_MODEL)"
+        }
+    }
+
+    $hasModel = $false
+    $hasOutputTag = $false
+    for ($i = 0; $i -lt $ArgsList.Count; $i++) {
+        $a = [string]$ArgsList[$i]
+        if ($a -eq "--model") { $hasModel = $true }
+        if ($a -eq "--output-tag") { $hasOutputTag = $true }
+    }
+
+    $out = New-Object System.Collections.Generic.List[string]
+    foreach ($a in $ArgsList) { [void]$out.Add([string]$a) }
+
+    if (-not $hasModel -and (Test-Path $info.Model)) {
+        [void]$out.Add("--model")
+        [void]$out.Add([string]$info.Model)
+    }
+    if (-not $hasOutputTag) {
+        [void]$out.Add("--output-tag")
+        [void]$out.Add([string]$info.Tag)
+    }
+
+    Write-Host ("count-all preset: {0} -> {1}" -f $Preset, $info.Label) -ForegroundColor Cyan
+    Write-Host ("model path:   {0}" -f $info.Model) -ForegroundColor DarkCyan
+    return , $out.ToArray()
+}
+
 function Expand-ModelPreset([string]$Preset, [string[]]$ArgsList) {
     $info = Get-PresetInfo $Preset
     if ($null -eq $info) {
@@ -119,12 +159,14 @@ function Expand-ModelPreset([string]$Preset, [string[]]$ArgsList) {
 
 $all = @($args)
 if ($all.Count -eq 0) {
-    Write-Host "Usage: .\run.ps1 <annotate|count|compare|8m|ebike> [args...]" -ForegroundColor Yellow
-    Write-Host "  8m     -> count with yolov8m.pt"
-    Write-Host "  ebike  -> count with COUNT_YOLO_EBIKE_MODEL"
+    Write-Host "Usage: .\run.ps1 <annotate|count|count-all|run-job|serve|compare|8m|8m-all|ebike|ebike-all> [args...]" -ForegroundColor Yellow
+    Write-Host "  8m / ebike       -> count one line"
+    Write-Host "  8m-all / ebike-all -> count all lines in config (single video pass)"
     Write-Host "Python: $Python"
     Write-Host "Examples:"
+    Write-Host "  .\run.ps1 annotate --lines L1_主路,L1_匝道,L1_右路 --image output\frame_ref.jpg"
     Write-Host "  .\run.ps1 8m --mode line --line L1_南直行 --device 0"
+    Write-Host "  .\run.ps1 8m-all --device 0"
     Write-Host "  .\run.ps1 ebike --mode line --line L1_南直行 --device 0 --max-seconds 120"
     exit 1
 }
@@ -143,21 +185,43 @@ try {
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         }
         "count" {
-            & $Python "count_traffic.py" @Rest
+            & $Python "count_traffic.py" count @Rest
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        }
+        "count-all" {
+            & $Python "count_traffic.py" count-all @Rest
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         }
         "8m" {
             $expanded = Expand-ModelPreset -Preset "8m" -ArgsList $Rest
-            & $Python "count_traffic.py" @expanded
+            & $Python "count_traffic.py" count @expanded
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        }
+        "8m-all" {
+            $expanded = Expand-CountAllPreset -Preset "8m" -ArgsList $Rest
+            & $Python "count_traffic.py" count-all @expanded
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         }
         "ebike" {
             $expanded = Expand-ModelPreset -Preset "ebike" -ArgsList $Rest
-            & $Python "count_traffic.py" @expanded
+            & $Python "count_traffic.py" count @expanded
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        }
+        "ebike-all" {
+            $expanded = Expand-CountAllPreset -Preset "ebike" -ArgsList $Rest
+            & $Python "count_traffic.py" count-all @expanded
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         }
         "compare" {
             & $Python "compare_ground_truth.py" @Rest
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        }
+        "serve" {
+            & $Python "count_traffic.py" serve @Rest
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        }
+        "run-job" {
+            & $Python "count_traffic.py" run-job @Rest
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         }
         default {

@@ -1,89 +1,92 @@
 # count-yolo
 
-Fixed-camera intersection counting with YOLO tracking and **layered evaluation** (L1 line → L3 origin-destination). A field script, not a product.
+固定机位路口视频 + YOLO 跟踪 + 几何规则，做 **L1 过线计数**（L3 转向为骨架）。现场调查脚本，不是产品。
 
-用固定摄像头视频，自动统计交叉口各进口的左转 / 直行 / 右转辆次，并按车型分类。这是给交通调查用的脚本，不是 SaaS，也不训练模型。YOLO 本身是现成的；真正花时间的是验收怎么分层，以及通用权重漏掉的摩托车怎么补。
+## 能做什么
 
-## 一个实际用得上的结论
+- **Web 控制台**（本机）：建 Job → 标定断面 → 试跑 30s / 全片计数 → 本机打开 debug 视频与 JSON
+- **CLI**：`annotate` / `8m-all` / `run-job` / `compare`
+- **多断面**：一次视频、多条计数线，每断面独立 JSON + debug 视频
+- **离线单测**：几何、Job 解析、路径规则（不装 GPU / torch 也能 `pytest`）
 
-视频质量决定验收层级。远景、遮挡严重的匝道素材只验 **L1 近场过线**，不要拿它证明四进口全矩阵。
+未做：写 Excel、双模型单遍 fuse、L3 八区标定 GUI。
 
-在示例匝道视频（南进口直行，22 分钟，人工对照 1533 辆）上：
+## 路径约定（重要）
 
-| 方案 | 合计 | vs GT |
-|------|------|-------|
-| yolov8m 单模型 | 1304 | -14.9% |
-| 电自/摩托专用权重单模型 | 1112 | -27.5% |
-| yolov8m 四轮 + 专用权重摩托（事后拼接） | 1520 | -0.8% |
+**Job、config、文档里的路径一律相对仓库根目录**，例如：
 
-漏检主因是 COCO 权重几乎看不见摩托（只检出 2 辆）。降检测阈值无效：0.15 和 0.25 全片结果完全相同。对向车道和潮汐车道靠轨迹方向过滤，靠收窄计数线会把同向潮汐车道一起裁掉。
+```yaml
+video: videos/文锦北路.MP4
+config: configs/某路口.json
+```
 
-L3（entry/exit 多边形 + 转向查表）代码里有骨架，示例视频上完整轨迹经常是 0，所以本仓库不把它写成已验证能力。
+也支持绝对路径（本机专用），但 **不要写进要提交的 yaml/json**；仓库内示例只用相对路径。视频、权重、`output/` 已在 `.gitignore`。
 
-## L1 过线计数画面
-
-120 秒冒烟，用来看计数链路是否在工作：黄线是标定的近场计数线，绿框为跟踪中，橙框为已过线计入。这是可视化验证，不是全片 22 分钟的精度合同；全片数字仍以表格和 `examples/` 为准。
-
-![L1 近场过线计数（120 秒）](docs/assets/l1_line_count_demo.mp4)
-
-静帧：
-
-![计数线与跟踪框](docs/assets/l1_line_count_poster.jpg)
-
-## 当前能做什么
-
-已实现：标定一条计数线 → YOLO + ByteTrack 过线计数 → JSON → 和人工调查表比对。
-
-未做：双模型单遍融合、自动写入 Excel 统计表、L3 八区标定 GUI。换机位更好的十字口视频之前，这些都不该作为卖点。
+解析逻辑见 `src/count_yolo/paths.py`：`resolve_path()` 把相对路径接到 `PROJECT_ROOT`。
 
 ## Quick start
 
-Python ≥ 3.10。离线测试不需要 GPU 和视频。
+Python ≥ 3.10。
 
 ```powershell
+cd count_yolo
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
 python -m pytest tests/ -q
 ```
 
-跑视频计数再装运行时依赖（首次会拉取 YOLO 权重，体积较大）：
+跑视频与 Web 控制台：
 
 ```powershell
 pip install -e ".[runtime]"
 copy .env.example .env
-.\run.ps1 8m --mode line --line L1_南直行 --device 0 --max-seconds 120
-.\run.ps1 compare --counts examples\counts_L1_south_through_yolov8m.json --level L1
+.\run.ps1 serve
 ```
 
-Linux / macOS 用 `./scripts/run.sh`。视频、权重、debug 录像默认不进 git，把 MP4 放到仓库根目录，把 `yolov8m.pt` 放到 `models/`（缺失时 ultralytics 可能自动下载）。
+浏览器打开 http://127.0.0.1:8765 。流程：新建 Job → 填 `videos/xxx.MP4` → 填断面名 → **标定断面**（弹出 OpenCV）→ 勾选 **试跑 30 秒** 验收 → 取消勾选后 **全量计数**。结果在 `output/jobs/<job_id>/`，页面可 **本机打开**（系统默认播放器）。
 
-标定计数线会弹窗（需要本机显示器）：
+CLI 等价：
 
 ```powershell
-.\run.ps1 annotate --image output\frame_ref.jpg --line L1_南直行 --direction near_to_far
+copy jobs\_template.yaml jobs\2026-路口_调查_0901.yaml
+# 编辑 video / config / lines（相对路径）
+.\run.ps1 annotate --config configs\某路口.json --lines "L1_主路,L1_匝道" --job 2026-路口_调查_0901
+.\run.ps1 run-job --job 2026-路口_调查_0901 --device 0
 ```
 
-`opencv-python` 和 `opencv-python-headless` 不能同时装，否则窗口起不来。
+`run.ps1` 会优先用项目 `.venv` 或 `.env` 里的 `COUNT_YOLO_PYTHON`（可指向已有 GPU 环境，如 `../uva/.venv`）。
 
 ## 仓库结构
 
 ```text
-src/count_yolo/     计数、标定、比对的源码
-scripts/            run.ps1 / run.sh
-tests/              离线单测（几何、车型映射、GT 误差）
-configs/            示例路口标定
-ground_truth/       人工调查对照
-examples/           已发表的全片 JSON（无本机路径）
-docs/               prd / rfc / working / test
-docs/assets/        L1 120 秒 overlay 演示与静帧
+src/count_yolo/       计数、标定、Job、Web
+jobs/_template.yaml     任务模板（复制后改名使用）
+configs/                路口几何（line_counting）
+output/jobs/<job_id>/   运行产物（gitignore）
+docs/                   RFC、操作说明、测试约定
+tests/                  离线单测
+run.ps1                 Windows 入口
 ```
 
-根目录的 `count_traffic.py`、`annotate_line.py`、`compare_ground_truth.py` 是兼容入口。隔一段时间回来看 [`阶段总结.md`](阶段总结.md)；交给别人看 [`交接说明.md`](交接说明.md)。
+根目录 `count_traffic.py`、`annotate_line.py` 为兼容包装（内部 `sys.path` 注入 `src/`），**Web 子进程也走这两个入口**，不要假设已 `pip install` 包名 `count_yolo`。
+
+## 精度与分层（摘要）
+
+示例匝道远景素材：**只验 L1 近场过线**，不拿它证明四进口全矩阵。COCO yolov8m 漏摩托严重；四轮 + 电自权重拼接可接近人工表。详见 `阶段总结.md` 与 `examples/`。
+
+## 文档
+
+| 文件 | 读者 |
+|------|------|
+| [`交接说明.md`](交接说明.md) | 人接手 |
+| [`AI交接说明.md`](AI交接说明.md) | AI / 自动化 |
+| [`docs/input_config.md`](docs/input_config.md) | Job + config 字段 |
+| [`docs/rfc_local_console.md`](docs/rfc_local_console.md) | Web 控制台设计 |
 
 ## Privacy
 
-This repository is designed to be publishable with only fake examples. `.env.example` uses placeholders. Weights, Excel templates, and runtime `output/` are gitignored. The 120-second clip in `docs/assets/` is a published field-camera demo for the L1 overlay; other videos stay local. Published JSON fixtures store filenames only, not local absolute paths.
+可公开仓形态：示例 JSON 不含本机绝对路径；权重与原始 MP4 不进 git。`docs/assets/` 内演示片除外。
 
 ## License
 

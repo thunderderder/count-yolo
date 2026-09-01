@@ -182,8 +182,14 @@
       "evaluation_level": "L1",
       "note": "annotate_line.py 用户标定原线；方向过滤 near_to_far 保留",
       "line": [
-        [309, 798],
-        [1646, 794]
+        [
+          309,
+          798
+        ],
+        [
+          1646,
+          794
+        ]
       ],
       "direction": "near_to_far",
       "require_motion_direction": true,
@@ -191,6 +197,69 @@
         "entry_direction": "南",
         "movement": "直行",
         "entry": "南进口"
+      }
+    },
+    "L1_主路": {
+      "evaluation_level": "L1",
+      "note": "annotate_line.py 标定",
+      "line": [
+        [
+          784,
+          795
+        ],
+        [
+          1154,
+          792
+        ]
+      ],
+      "direction": "near_to_far",
+      "require_motion_direction": true,
+      "maps_to": {
+        "entry_direction": "主路",
+        "movement": "断面",
+        "entry": "主路进口"
+      }
+    },
+    "L1_匝道": {
+      "evaluation_level": "L1",
+      "note": "annotate_line.py 标定",
+      "line": [
+        [
+          634,
+          780
+        ],
+        [
+          357,
+          754
+        ]
+      ],
+      "direction": "near_to_far",
+      "require_motion_direction": true,
+      "maps_to": {
+        "entry_direction": "匝道",
+        "movement": "断面",
+        "entry": "匝道进口"
+      }
+    },
+    "L1_右路": {
+      "evaluation_level": "L1",
+      "note": "annotate_line.py 标定",
+      "line": [
+        [
+          1362,
+          840
+        ],
+        [
+          1406,
+          934
+        ]
+      ],
+      "direction": "near_to_far",
+      "require_motion_direction": true,
+      "maps_to": {
+        "entry_direction": "右路",
+        "movement": "断面",
+        "entry": "右路进口"
       }
     }
   }

@@ -2,6 +2,27 @@
 
 ## Changelog
 
+### 2026-09-01
+
+- 定稿本地 Web 控制台 RFC：`docs/rfc_local_console.md`（job 两层配置、全片三分路 debug、标定 10s 预览片）
+- 新增 `jobs/_template.yaml`；任务命名 `年-场景_调查项_MMDD`
+- 重写 `docs/input_config.md` 以 job 为中心
+- 多线标定：`annotate --lines "..."`；多线计数 `8m-all`（实现已存在，job 集成待做）
+
+### 2026-09-01（晚）
+
+- 本地 Web 控制台：`run.ps1 serve` → http://127.0.0.1:8765
+- `jobs/*.yaml` + `run-job`；每断面全片 `debug_<line>_8m.mp4`（橙=已计数，绿=跟踪中）
+- Job 字段 `ebike_enabled`：额外 ebike 一遍，多 `debug_<line>_ebike.mp4`
+- 标定后 `calibration_preview_10s.mp4`
+
+### 2026-09-01（早）
+
+- 多线标定：`annotate --lines "L1_主路,L1_匝道,L1_右路"`（PowerShell 须加引号）
+- 多线计数：`count-all` / `8m-all`，默认单遍视频处理所有 `line_counting`
+- 新增 `AI交接说明.md`（给 Agent）；人类用 `交接说明.md`
+- config 已写入三条新断面线：主路 / 匝道 / 右路
+
 ### 2026-08-31
 
 - 按 project_scaffold 把目录收成可公开的独立项目：`src/`、`scripts/`、`tests/`、`docs/`、CI、`.env.example`

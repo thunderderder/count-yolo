@@ -1,0 +1,43 @@
+# Job 模板 — 复制为 jobs/{年}-{场景}_{调查项}_{MMDD}.yaml
+# 示例：jobs/2026-文锦北路_南直行_0901.yaml
+#       jobs/2026-文锦北路_三断面_0901.yaml
+
+# 必填：本机视频路径（相对仓库根或绝对路径）
+video: videos/2026-文锦北路_南直行.MP4
+
+# 必填：几何标定（line_counting、zones）
+config: configs/文锦北路-草埔立交匝道_临时.json
+
+# 本次要统计的断面（与 config 中 line_counting 同步；标定成功后 Web 会自动写入）
+lines:
+  - L1_主路
+# 多断面示例：
+# lines:
+#   - L1_主路
+#   - L1_匝道
+#   - L1_右路
+
+# 模型：8m | ebike（主计数固定 8m；ebike 见下方开关）
+model: 8m
+
+# 额外用电动自行车/摩托专用权重再跑一遍，每断面多一个 debug_*_ebike.mp4
+ebike_enabled: false
+
+# auto | 0 | cpu
+device: auto
+
+# 试跑：仅处理前 N 秒（验收用）。不填 = 全片
+# preview_seconds: 30
+
+# 计数时间窗（秒）。不填或 end 为空 = 全片（若已设 preview_seconds 则以试跑为准）
+start: 0
+# end: null
+
+# 输出目录（默认 output/jobs/<本文件主名>/）
+# output_dir: output/jobs/2026-文锦北路_南直行_0901
+
+# 可选：与 ground_truth 比对时用的 CSV（compare 用，非计数必需）
+# ground_truth: ground_truth/文锦北路-草埔立交匝道_临时.csv
+
+# 备注（调查说明、口径）
+note: ""

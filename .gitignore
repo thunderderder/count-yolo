@@ -31,6 +31,12 @@ models/*.onnx
 output/*
 !output/.gitkeep
 
+# Local job files (keep template + archive examples only)
+jobs/*
+!jobs/_template.yaml
+!jobs/_archive/
+!jobs/_archive/**
+
 # IDE
 .idea/
 .vscode/
