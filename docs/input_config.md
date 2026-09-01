@@ -88,7 +88,7 @@ device: auto
 ## 临时覆盖（不改 job 文件）
 
 ```powershell
-.\run.ps1 8m-all --video "D:\data\新素材.MP4" --config configs\新路口.json --lines "L1_主路" --device 0
+.\run.ps1 8m-all --video "videos/新素材.MP4" --config configs\新路口.json --lines "L1_主路" --device 0
 ```
 
 ## 标定只用截图

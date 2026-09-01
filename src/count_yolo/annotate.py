@@ -103,16 +103,18 @@ def save_lines(
     with config_path.open("w", encoding="utf-8") as f:
         json.dump(config, f, ensure_ascii=False, indent=2)
 
-    save_preview.parent.mkdir(parents=True, exist_ok=True)
-    preview = frame.copy()
-    for idx, entry in enumerate(line_entries.values()):
-        (x1, y1), (x2, y2) = entry["line"]
-        color = LINE_COLORS_BGR[idx % len(LINE_COLORS_BGR)]
-        cv2.line(preview, (int(x1), int(y1)), (int(x2), int(y2)), color, 3)
+    if cv2 is not None:
+        save_preview.parent.mkdir(parents=True, exist_ok=True)
+        preview = frame.copy()
+        for idx, entry in enumerate(line_entries.values()):
+            (x1, y1), (x2, y2) = entry["line"]
+            color = LINE_COLORS_BGR[idx % len(LINE_COLORS_BGR)]
+            cv2.line(preview, (int(x1), int(y1)), (int(x2), int(y2)), color, 3)
 
-    cv2.imwrite(str(save_preview), preview)
+        cv2.imwrite(str(save_preview), preview)
+        print(f"preview -> {save_preview}")
+
     print(f"saved {len(line_entries)} line(s) -> {config_path}")
-    print(f"preview -> {save_preview}")
 
     if calibration_mp4 is not None:
         pts = {
