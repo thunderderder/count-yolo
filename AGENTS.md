@@ -4,7 +4,7 @@
 
 ## 这个项目是什么
 
-给交通调查赋能的脚本：YOLO 检测 + ByteTrack 跟踪 + 几何规则，把固定机位视频数成「进口 × 转向 × 车型」辆次。不是产品，不做 Web，不训练模型。当前只稳定交付 **L1 近场过线计数**。
+给交通调查赋能的脚本：YOLO 检测 + ByteTrack 跟踪 + 几何规则，把固定机位视频数成「进口 × 转向 × 车型」辆次。不是产品，不训练模型。当前稳定交付 **L1 近场过线计数** + **本机 Web 控制台**（`.\run.ps1 serve`）。
 
 公开仓库定位是个人项目库里的附件证据，不是主打作品。
 
@@ -47,7 +47,7 @@ python -m pytest tests/ -q
 
 | 入口 | 说明 |
 |------|------|
-| `.\run.ps1 8m \| 8m-all \| ebike \| ebike-all \| count \| count-all \| annotate \| compare` | 日常入口 |
+| `.\run.ps1 serve \| run-job \| 8m \| 8m-all \| annotate \| compare` | 日常入口 |
 | `python count_traffic.py` | 计数兼容入口 |
 | `python annotate_line.py` | 标定兼容入口 |
 | `python compare_ground_truth.py` | GT 比对兼容入口 |
@@ -57,7 +57,7 @@ python -m pytest tests/ -q
 - 对外说明：`README.md`
 - 需求：`docs/prd.md`
 - 架构：`docs/rfc.md`
-- **本地 Web / Job 模型（待实现）**：`docs/rfc_local_console.md`
+- **本地 Web / Job**：`docs/rfc_local_console.md`、`docs/input_config.md`
 - changelog：`docs/working.md`
 - 测试策略：`docs/test.md`
 - 搁置恢复：`阶段总结.md`
