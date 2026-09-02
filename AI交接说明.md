@@ -43,7 +43,8 @@ AI交接说明.md（本文）
 | **稳定能力** | L1 多断面过线；单遍视频 `count_lines_traffic` |
 | **Web 已实现** | Job CRUD、Web 触发标定子进程、GPU 检测、`preview_seconds: 30` 试跑、**停止**按钮、输出 **本机打开** |
 | **标定持久化** | 写入 `configs/*.json`；**重启 serve 不用重画线** |
-| **过线逻辑** | 几何穿线（`crossing_transition`）→ 可选运动过滤（`motion_matches_direction`，慢车阈值已放宽） |
+| **过线逻辑** | 几何穿线 → 运动过滤（均可 Web 调参） |
+| **Web 调参** | 「检测与跟踪」= YOLO+ByteTrack；「运动过滤」= 过线方向门槛 |
 | **Web 未做** | 浏览器内画线、Web 内嵌播放 mp4v |
 | **未实现** | `write_excel.py`、单遍 `--mode fuse`、L3 八区标定 GUI |
 | **标定** | 每次 `save_lines` **整表覆盖** `line_counting`，不 merge 旧线名 |
@@ -90,7 +91,9 @@ examples/*.json           发表合同（勿随手改）
 | `src/count_yolo/jobs.py` | Job yaml、`resolve_count_window`（`preview_seconds`） |
 | `src/count_yolo/run_job.py` | `run-job`；计数用 config 全部 `line_counting` |
 | `src/count_yolo/pipeline.py` | 多线 `count_lines_traffic`；debug 叠字 `line_total` 为累计 |
-| `src/count_yolo/geometry.py` | 穿线判定、运动方向过滤（慢车阈值） |
+| `src/count_yolo/geometry.py` | 穿线判定、`motion_matches_direction` |
+| `src/count_yolo/motion.py` | Job 运动过滤设置；`MotionSettings` |
+| `src/count_yolo/tracking.py` | Job ByteTrack 设置；`TrackSettings` |
 | `src/count_yolo/annotate.py` | 标定；`save_lines` 覆盖 `line_counting`；PIL 中文叠字 |
 | `src/count_yolo/preview.py` | 标定预览片、叠线静帧 |
 | `src/count_yolo/paths.py` | `resolve_path`、默认视频/config |
@@ -175,11 +178,10 @@ debug 编码为 **mp4v**，浏览器常无法播放 → 用 Web「本机打开�
 | 关 | config 字段 | 代码 |
 |----|-------------|------|
 | 几何 | `line`、`direction`、`x_min`/`x_max` | `crossing_transition`：中心点从线前侧到后侧 |
-| 运动 | `require_motion_direction` | `motion_matches_direction`：近几帧 y 位移方向与 `direction` 一致 |
+| 运动 | Job：`require_motion_direction`、`motion_min_dy_*`；config  per-line 开关 | `motion_matches_direction`（阈值来自 Job） |
 
 **串行**：几何触发后，若 `require_motion_direction: true` 还要过运动关才计数。  
-**慢车漏计**（2026-09-02 前）：拥堵时每帧位移 <1px，运动关在过线窗口内一直拒 → 车过线后永久漏计；已放宽为 `dy_total < -1.5` + 步长多数表决。  
-**标定与 serve 无关**：断面坐标在 `configs/*.json`，重启 serve 不重画。  
+**慢车漏计**（2026-09-02 前）：运动关过严 → Web「运动过滤」慢车预设或降 `motion_min_dy_*`。  
 **挡潮汐**：用运动过滤，禁止收窄 x 裁线。
 
 ---
@@ -220,7 +222,8 @@ debug 编码为 **mp4v**，浏览器常无法播放 → 用 Web「本机打开�
 | `run_job` 结束报错 | 曾缺 `PROJECT_ROOT` import | 已修；看 `run.log` 尾部 |
 | OpenCV 中文乱码 | `putText` 不支持中文 | 已用 PIL + `msyh.ttc` |
 | 标定无窗口 | opencv headless | 卸 headless，留 `opencv-python` |
-| 慢车绿框过线不变橙 | 运动阈值过严（旧 -6/-1） | 已放宽；重跑试跑；仍漏试 `require_motion_direction: false` |
+| 慢车绿框过线不变橙 | 运动阈值过严 | Web「运动过滤」→ 慢车更宽松；或降 `motion_min_dy_*` |
+| 遮挡后 ID 变了 | ByteTrack 丢轨 | Web「检测与跟踪」→ 抗遮挡预设；加大 `track_buffer` |
 | 重启 serve 要不要重画 | 标定在 config 文件里 | **不用**；刷新 Web 看断面列表即可 |
 | 找不到怎么停任务 | 停止按钮灰了 | 仅运行中可点；或杀 serve / `POST /api/run/stop` |
 

@@ -2,6 +2,11 @@
 
 ## Changelog
 
+### 2026-09-02（夜）
+
+- Web「运动过滤」面板：Job 级 `require_motion_direction`、`motion_min_points`、`motion_min_dy_total`、`motion_min_dy_med`；预设「慢车更宽松 / 关闭」
+- Web 检测与跟踪各参数字段补充「是什么 / 怎么调」说明（`index.html`）
+
 ### 2026-09-02（晚）
 
 - Job / Web 暴露检测与 ByteTrack 参数：`conf`、`iou`、`vid_stride`、`track_buffer` 等；输出 `tracker.yaml` 快照

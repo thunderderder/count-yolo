@@ -124,6 +124,23 @@ Web 一键 **抗遮挡预设**：`track_buffer=90`、`conf=0.2`、`track_low_thr
 
 ---
 
+## Job 运动过滤参数（过线方向 / 慢车）
+
+写在 **job yaml**（Web「运动过滤」面板保存）。计数时：**几何穿线** →（若启用）**运动方向** → +1。断面 `direction` 仍在 config 标定里，此处只调门槛松紧。
+
+| 字段 | 默认 | 慢车/漏计时 | 作用 |
+|------|------|-------------|------|
+| `require_motion_direction` | `true` | 对比试跑可关 | 是否启用运动关；关=纯几何过线 |
+| `motion_min_points` | 3 | 2 | 判方向前最少轨迹帧数 |
+| `motion_min_dy_total` | 1.5 | 1.0–0.8 | 过线窗口内 y 总位移（像素，near_to_far 为减小） |
+| `motion_min_dy_med` | 0.25 | 0.15–0.1 | 步长中位数门槛（或多数步长方向正确也可过） |
+
+Web 预设：**慢车更宽松**（2 / 1.0 / 0.15）、**关闭运动过滤**（仅几何）。有对向/潮汐时勿长期关闭。
+
+config 里每条线仍有 `require_motion_direction`；Job 总开关为关时全部断面跳过运动关。
+
+---
+
 ## 临时覆盖（不改 job 文件）
 
 ```powershell
@@ -144,7 +161,7 @@ Web 一键 **抗遮挡预设**：`track_buffer=90`、`conf=0.2`、`track_low_thr
 | 跑错视频 | 看命令行 `video:` 行；确认 `--job` 指向的文件 |
 | PowerShell `--lines` | 逗号列表须加引号：`"L1_主路,L1_匝道"` |
 | 以为 Web 能判断准不准 | 用 `compare` + GT，见 `ground_truth/` |
-| 慢车过线不计 | 运动过滤过严 | 已放宽阈值；重跑试跑；或试关 `require_motion_direction` |
+| 慢车过线不计 | 运动过滤过严 | Web「运动过滤」→ 慢车更宽松；或略降 `motion_min_dy_*` |
 | 重启 serve 后要不要重画 | 标定在 config 文件 | **不用** |
 
 计数 JSON 只保存**视频文件名**（无盘符）。本机绝对路径只出现在 job / `.env`（gitignore）。
