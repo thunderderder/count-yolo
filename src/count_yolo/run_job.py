@@ -14,6 +14,7 @@ from count_yolo.jobs import (
 from count_yolo.paths import PROJECT_ROOT
 from count_yolo.pipeline import count_lines_traffic, load_config
 from count_yolo.timeparse import resolve_device
+from count_yolo.tracking import TrackSettings
 
 
 def _model_tag(model_path: Path) -> str:
@@ -30,8 +31,8 @@ def run_job(
     *,
     video: Path | None = None,
     config: Path | None = None,
-    conf: float = 0.25,
-    vid_stride: int = 1,
+    conf: float | None = None,
+    vid_stride: int | None = None,
 ) -> dict:
     job = load_job(job_id)
     video_path = resolve_job_video(job, video)
@@ -46,6 +47,12 @@ def run_job(
 
     device = resolve_device(job.device)
     start_sec, end_sec = resolve_count_window(job)
+    track = TrackSettings.from_job_fields(job)
+    if conf is not None:
+        track.conf = conf
+    if vid_stride is not None:
+        track.vid_stride = vid_stride
+    tracker_yaml = track.write_tracker_yaml(output_dir / "tracker.yaml")
 
     print(f"job: {job.id}", flush=True)
     print(f"video: {video_path}", flush=True)
@@ -53,6 +60,9 @@ def run_job(
     print(f"output: {output_dir}", flush=True)
     print(f"lines: {', '.join(line_names)}", flush=True)
     print(f"device: {device}", flush=True)
+    for line in track.summary_lines():
+        print(f"track: {line}", flush=True)
+    print(f"tracker_yaml: {tracker_yaml.relative_to(PROJECT_ROOT).as_posix()}", flush=True)
     if job.preview_seconds:
         print(f"preview_run: {job.preview_seconds}s (start={start_sec}, end={end_sec})", flush=True)
     else:
@@ -72,9 +82,11 @@ def run_job(
         debug_video=None,
         start_sec=start_sec,
         end_sec=end_sec,
-        vid_stride=vid_stride,
-        conf=conf,
+        vid_stride=track.vid_stride,
+        conf=track.conf,
         device=device,
+        iou=track.iou,
+        tracker_yaml=tracker_yaml,
         per_line_debug=True,
     )
 
@@ -96,9 +108,11 @@ def run_job(
             debug_video=None,
             start_sec=start_sec,
             end_sec=end_sec,
-            vid_stride=vid_stride,
-            conf=conf,
+            vid_stride=track.vid_stride,
+            conf=track.conf,
             device=device,
+            iou=track.iou,
+            tracker_yaml=tracker_yaml,
             per_line_debug=True,
             debug_show_class=True,
         )

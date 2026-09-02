@@ -103,6 +103,27 @@ device: auto
 
 ---
 
+## Job 检测与跟踪参数（遮挡 / 丢 ID）
+
+写在 **job yaml**（Web「检测与跟踪」面板保存），运行时生成 `output/jobs/<id>/tracker.yaml` 供 ByteTrack 使用。
+
+| 字段 | 默认 | 遮挡时建议 | 作用 |
+|------|------|------------|------|
+| `conf` | 0.25 | 0.15–0.2 | 检测置信度；略降可检出部分遮挡框 |
+| `iou` | 0.7 | 0.7 | NMS 重叠抑制 |
+| `vid_stride` | 1 | **保持 1** | 跳帧；>1 会加重遮挡丢轨 |
+| `track_buffer` | 30 | 60–120 | 丢失后保留轨迹的帧数；**最关键** |
+| `track_low_thresh` | 0.1 | 0.05 | ByteTrack 第二阶段低分框关联 |
+| `match_thresh` | 0.8 | 0.7–0.75 | 重现时 IoU 匹配松紧 |
+| `track_high_thresh` | 0.25 | 0.25 | 第一阶段高分匹配 |
+| `new_track_thresh` | 0.25 | 0.25 | 新开轨迹门槛 |
+
+Web 一键 **抗遮挡预设**：`track_buffer=90`、`conf=0.2`、`track_low_thresh=0.05`、`match_thresh=0.75`。
+
+注意：遮挡后 ID 彻底丢失会分配**新 ID**，过线计数仍按 track 计一次；调参目标是减少丢 ID，无法 100% 消除。
+
+---
+
 ## 临时覆盖（不改 job 文件）
 
 ```powershell

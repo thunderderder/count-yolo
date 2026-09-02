@@ -88,6 +88,33 @@
         启用电动自行车识别（额外用 ebike 权重再跑一遍，每断面多一个 debug 视频）
       </label>
 
+      <details id="trackPanel" style="margin-top:12px;">
+        <summary style="cursor:pointer; color:var(--muted); font-size:13px;">检测与跟踪（遮挡丢 ID 时调这里）</summary>
+        <p class="muted" style="margin:8px 0;">
+          ByteTrack 参数。遮挡后 ID 丢失时优先加大 <code>track_buffer</code>、略降 <code>conf</code> / <code>track_low_thresh</code>；<code>vid_stride</code> 请保持 1。
+        </p>
+        <div class="row" style="margin-bottom:8px;">
+          <button type="button" id="btnTrackDefault" class="secondary">恢复默认</button>
+          <button type="button" id="btnTrackOcclusion" class="secondary">抗遮挡预设</button>
+        </div>
+        <label>检测置信度 conf</label>
+        <input id="conf" type="number" min="0.05" max="0.95" step="0.01" value="0.25" />
+        <label>NMS IoU</label>
+        <input id="iou" type="number" min="0.1" max="0.95" step="0.01" value="0.7" />
+        <label>跳帧 vid_stride（遮挡场景用 1）</label>
+        <input id="vidStride" type="number" min="1" max="10" step="1" value="1" />
+        <label>丢失缓冲 track_buffer（帧）</label>
+        <input id="trackBuffer" type="number" min="5" max="300" step="1" value="30" />
+        <label>关联阈值 match_thresh</label>
+        <input id="matchThresh" type="number" min="0.1" max="0.99" step="0.01" value="0.8" />
+        <label>低分检测阈值 track_low_thresh</label>
+        <input id="trackLowThresh" type="number" min="0.01" max="0.5" step="0.01" value="0.1" />
+        <label>高分匹配 track_high_thresh</label>
+        <input id="trackHighThresh" type="number" min="0.05" max="0.95" step="0.01" value="0.25" />
+        <label>新轨迹阈值 new_track_thresh</label>
+        <input id="newTrackThresh" type="number" min="0.05" max="0.95" step="0.01" value="0.25" />
+      </details>
+
       <label>备注 note</label>
       <textarea id="note"></textarea>
 
@@ -154,6 +181,69 @@
 
     function parseLineNames(text) {
       return text.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+
+    const TRACK_DEFAULTS = {
+      conf: 0.25,
+      iou: 0.7,
+      vid_stride: 1,
+      track_buffer: 30,
+      track_high_thresh: 0.25,
+      track_low_thresh: 0.1,
+      new_track_thresh: 0.25,
+      match_thresh: 0.8,
+      fuse_score: true,
+    };
+
+    const TRACK_OCCLUSION = {
+      conf: 0.2,
+      iou: 0.7,
+      vid_stride: 1,
+      track_buffer: 90,
+      track_high_thresh: 0.25,
+      track_low_thresh: 0.05,
+      new_track_thresh: 0.25,
+      match_thresh: 0.75,
+      fuse_score: true,
+    };
+
+    function fillTrackForm(values) {
+      $("conf").value = values.conf;
+      $("iou").value = values.iou;
+      $("vidStride").value = values.vid_stride;
+      $("trackBuffer").value = values.track_buffer;
+      $("trackHighThresh").value = values.track_high_thresh;
+      $("trackLowThresh").value = values.track_low_thresh;
+      $("newTrackThresh").value = values.new_track_thresh;
+      $("matchThresh").value = values.match_thresh;
+    }
+
+    function readTrackForm() {
+      return {
+        conf: parseFloat($("conf").value),
+        iou: parseFloat($("iou").value),
+        vid_stride: parseInt($("vidStride").value, 10),
+        track_buffer: parseInt($("trackBuffer").value, 10),
+        track_high_thresh: parseFloat($("trackHighThresh").value),
+        track_low_thresh: parseFloat($("trackLowThresh").value),
+        new_track_thresh: parseFloat($("newTrackThresh").value),
+        match_thresh: parseFloat($("matchThresh").value),
+        fuse_score: true,
+      };
+    }
+
+    function trackFormFromJob(job) {
+      return {
+        conf: job.conf ?? TRACK_DEFAULTS.conf,
+        iou: job.iou ?? TRACK_DEFAULTS.iou,
+        vid_stride: job.vid_stride ?? TRACK_DEFAULTS.vid_stride,
+        track_buffer: job.track_buffer ?? TRACK_DEFAULTS.track_buffer,
+        track_high_thresh: job.track_high_thresh ?? TRACK_DEFAULTS.track_high_thresh,
+        track_low_thresh: job.track_low_thresh ?? TRACK_DEFAULTS.track_low_thresh,
+        new_track_thresh: job.new_track_thresh ?? TRACK_DEFAULTS.new_track_thresh,
+        match_thresh: job.match_thresh ?? TRACK_DEFAULTS.match_thresh,
+        fuse_score: job.fuse_score ?? true,
+      };
     }
 
     function defaultConfigPath() {
@@ -302,6 +392,7 @@
       $("ebikeEnabled").checked = !!job.ebike_enabled;
       $("preview30s").checked = job.preview_seconds != null && job.preview_seconds > 0;
       $("note").value = job.note || "";
+      fillTrackForm(trackFormFromJob(job));
       if (job.lines && job.lines.length) {
         $("lineNames").value = job.lines.join(",");
       }
@@ -395,6 +486,7 @@
         ebike_enabled: $("ebikeEnabled").checked,
         preview_seconds: previewSecondsValue(),
         note: $("note").value.trim(),
+        ...readTrackForm(),
       };
       await api(`/api/jobs/${encodeURIComponent(id)}`, {
         method: "PUT",
@@ -572,6 +664,8 @@
     $("btnAnnotate").addEventListener("click", () => startAnnotate(false));
     $("btnRedraw").addEventListener("click", () => startAnnotate(true));
     $("ebikeEnabled").addEventListener("change", updateCliHint);
+    $("btnTrackDefault").addEventListener("click", () => fillTrackForm(TRACK_DEFAULTS));
+    $("btnTrackOcclusion").addEventListener("click", () => fillTrackForm(TRACK_OCCLUSION));
     $("video").addEventListener("input", () => { updateCliHint(); updateRunState(lineCountCache); });
     $("config").addEventListener("input", updateCliHint);
     $("btnNew").addEventListener("click", async () => {
@@ -590,6 +684,7 @@
           ebike_enabled: false,
           preview_seconds: 30,
           note: "",
+          ...TRACK_DEFAULTS,
         }),
       });
       await loadJobs();

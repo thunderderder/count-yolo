@@ -2,6 +2,11 @@
 
 ## Changelog
 
+### 2026-09-02（晚）
+
+- Job / Web 暴露检测与 ByteTrack 参数：`conf`、`iou`、`vid_stride`、`track_buffer` 等；输出 `tracker.yaml` 快照
+- Web「抗遮挡预设」：`track_buffer=90`、`conf=0.2`、`track_low_thresh=0.05`
+
 ### 2026-09-02
 
 - 修复拥堵慢车过线漏计：`motion_matches_direction` 阈值从 -6/-1 放宽为 -1.5/-0.25 + 步长多数表决；`crossed_line` 改为侧向穿越判定（压线慢移不再漏触发）

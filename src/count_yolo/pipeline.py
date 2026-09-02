@@ -50,6 +50,32 @@ def resolve_model(path: str | None) -> str:
     return "yolov8m.pt"
 
 
+def _model_track_stream(
+    model,
+    video: Path,
+    *,
+    vehicle_class_ids: dict[int, str],
+    conf: float,
+    iou: float,
+    vid_stride: int,
+    device: str,
+    tracker_yaml: str | Path | None = None,
+):
+    tracker = str(tracker_yaml) if tracker_yaml is not None else "bytetrack.yaml"
+    return model.track(
+        source=str(video),
+        stream=True,
+        persist=True,
+        tracker=tracker,
+        classes=list(vehicle_class_ids.keys()),
+        conf=conf,
+        iou=iou,
+        vid_stride=vid_stride,
+        device=device,
+        verbose=False,
+    )
+
+
 def _require_cv2() -> None:
     if cv2 is None:
         raise ImportError("opencv-python is required to run counting. Install extras: pip install -e '.[runtime]'")
@@ -167,6 +193,8 @@ def count_lines_traffic(
     vid_stride: int,
     conf: float,
     device: str,
+    iou: float = 0.7,
+    tracker_yaml: str | Path | None = None,
     separate_passes: bool = False,
     per_line_debug: bool = False,
     debug_show_class: bool = False,
@@ -188,6 +216,8 @@ def count_lines_traffic(
                     vid_stride=vid_stride,
                     conf=conf,
                     device=device,
+                    iou=iou,
+                    tracker_yaml=tracker_yaml,
                 )
             )
         combined = {
@@ -250,16 +280,15 @@ def count_lines_traffic(
             str(debug_video), fourcc, fps / max(vid_stride, 1), (width, height)
         )
 
-    stream = model.track(
-        source=str(video),
-        stream=True,
-        persist=True,
-        tracker="bytetrack.yaml",
-        classes=list(vehicle_class_ids.keys()),
+    stream = _model_track_stream(
+        model,
+        video,
+        vehicle_class_ids=vehicle_class_ids,
         conf=conf,
+        iou=iou,
         vid_stride=vid_stride,
         device=device,
-        verbose=False,
+        tracker_yaml=tracker_yaml,
     )
 
     for result in stream:
@@ -437,6 +466,8 @@ def count_line_traffic(
     vid_stride: int,
     conf: float,
     device: str,
+    iou: float = 0.7,
+    tracker_yaml: str | Path | None = None,
 ) -> dict[str, Any]:
     from ultralytics import YOLO
 
@@ -475,16 +506,15 @@ def count_line_traffic(
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         writer = cv2.VideoWriter(str(debug_video), fourcc, fps / max(vid_stride, 1), (width, height))
 
-    stream = model.track(
-        source=str(video),
-        stream=True,
-        persist=True,
-        tracker="bytetrack.yaml",
-        classes=list(vehicle_class_ids.keys()),
+    stream = _model_track_stream(
+        model,
+        video,
+        vehicle_class_ids=vehicle_class_ids,
         conf=conf,
+        iou=iou,
         vid_stride=vid_stride,
         device=device,
-        verbose=False,
+        tracker_yaml=tracker_yaml,
     )
 
     for result in stream:
@@ -602,6 +632,8 @@ def count_od_traffic(
     vid_stride: int,
     conf: float,
     device: str,
+    iou: float = 0.7,
+    tracker_yaml: str | Path | None = None,
 ) -> dict[str, Any]:
     from ultralytics import YOLO
 
@@ -645,16 +677,15 @@ def count_od_traffic(
         counts[key][state.vehicle_class] += 1
         state.counted = True
 
-    stream = model.track(
-        source=str(video),
-        stream=True,
-        persist=True,
-        tracker="bytetrack.yaml",
-        classes=list(vehicle_class_ids.keys()),
+    stream = _model_track_stream(
+        model,
+        video,
+        vehicle_class_ids=vehicle_class_ids,
         conf=conf,
+        iou=iou,
         vid_stride=vid_stride,
         device=device,
-        verbose=False,
+        tracker_yaml=tracker_yaml,
     )
 
     for result in stream:

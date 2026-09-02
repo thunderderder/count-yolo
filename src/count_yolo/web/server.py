@@ -61,6 +61,15 @@ class JobPayload(BaseModel):
     ebike_enabled: bool = False
     preview_seconds: int | None = None
     note: str = ""
+    conf: float = 0.25
+    iou: float = 0.7
+    vid_stride: int = 1
+    track_buffer: int = 30
+    track_high_thresh: float = 0.25
+    track_low_thresh: float = 0.1
+    new_track_thresh: float = 0.25
+    match_thresh: float = 0.8
+    fuse_score: bool = True
 
 
 class AnnotatePayload(BaseModel):

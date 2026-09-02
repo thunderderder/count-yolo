@@ -25,6 +25,16 @@ class Job:
     ebike_enabled: bool = False
     preview_seconds: int | None = None
     note: str = ""
+    # 检测 / ByteTrack（遮挡调试见 Web「检测与跟踪」）
+    conf: float = 0.25
+    iou: float = 0.7
+    vid_stride: int = 1
+    track_buffer: int = 30
+    track_high_thresh: float = 0.25
+    track_low_thresh: float = 0.1
+    new_track_thresh: float = 0.25
+    match_thresh: float = 0.8
+    fuse_score: bool = True
 
     def to_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {
@@ -46,6 +56,19 @@ class Job:
             data["ground_truth"] = self.ground_truth
         if self.note:
             data["note"] = self.note
+        data.update(
+            {
+                "conf": self.conf,
+                "iou": self.iou,
+                "vid_stride": self.vid_stride,
+                "track_buffer": self.track_buffer,
+                "track_high_thresh": self.track_high_thresh,
+                "track_low_thresh": self.track_low_thresh,
+                "new_track_thresh": self.new_track_thresh,
+                "match_thresh": self.match_thresh,
+                "fuse_score": self.fuse_score,
+            }
+        )
         return data
 
     @classmethod
@@ -67,6 +90,15 @@ class Job:
             ebike_enabled=bool(data.get("ebike_enabled", False)),
             preview_seconds=int(data["preview_seconds"]) if data.get("preview_seconds") is not None else None,
             note=str(data.get("note") or ""),
+            conf=float(data.get("conf", 0.25) or 0.25),
+            iou=float(data.get("iou", 0.7) or 0.7),
+            vid_stride=int(data.get("vid_stride", 1) or 1),
+            track_buffer=int(data.get("track_buffer", 30) or 30),
+            track_high_thresh=float(data.get("track_high_thresh", 0.25) or 0.25),
+            track_low_thresh=float(data.get("track_low_thresh", 0.1) or 0.1),
+            new_track_thresh=float(data.get("new_track_thresh", 0.25) or 0.25),
+            match_thresh=float(data.get("match_thresh", 0.8) or 0.8),
+            fuse_score=bool(data.get("fuse_score", True)),
         )
 
 

@@ -41,3 +41,14 @@ start: 0
 
 # 备注（调查说明、口径）
 note: ""
+
+# --- 检测与跟踪（Web「检测与跟踪」面板；遮挡丢 ID 时调 track_buffer / conf）---
+# conf: 0.25
+# iou: 0.7
+# vid_stride: 1
+# track_buffer: 30
+# track_high_thresh: 0.25
+# track_low_thresh: 0.1
+# new_track_thresh: 0.25
+# match_thresh: 0.8
+# fuse_score: true
