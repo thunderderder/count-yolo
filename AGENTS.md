@@ -57,7 +57,7 @@ python -m pytest tests/ -q
 - 对外说明：`README.md`
 - 需求：`docs/prd.md`
 - 架构：`docs/rfc.md`
-- **本地 Web / Job**：`docs/rfc_local_console.md`、`docs/input_config.md`
+- **本地 Web / Job**：[`docs/rfc_local_console.md`](docs/rfc_local_console.md)（v1 已实现）、[`docs/input_config.md`](docs/input_config.md)
 - changelog：`docs/working.md`
 - 测试策略：`docs/test.md`
 - 搁置恢复：`阶段总结.md`

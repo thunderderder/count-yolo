@@ -2,6 +2,11 @@
 
 ## Changelog
 
+### 2026-09-02（夜续）
+
+- 更新 `docs/rfc_local_console.md`（状态改为 v1 已实现；API/调参/实现对照表）
+- 更新 `阶段总结.md`（Web 双面板、两道关计数、横岗素材）
+
 ### 2026-09-02（夜）
 
 - Web「运动过滤」面板：Job 级 `require_motion_direction`、`motion_min_points`、`motion_min_dy_total`、`motion_min_dy_med`；预设「慢车更宽松 / 关闭」

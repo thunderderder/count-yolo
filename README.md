@@ -84,7 +84,7 @@ run.ps1                 Windows 入口
 | [`交接说明.md`](交接说明.md) | 人接手 |
 | [`AI交接说明.md`](AI交接说明.md) | AI / 自动化 |
 | [`docs/input_config.md`](docs/input_config.md) | Job + config 字段 |
-| [`docs/rfc_local_console.md`](docs/rfc_local_console.md) | Web 控制台设计 |
+| [`docs/rfc_local_console.md`](docs/rfc_local_console.md) | Web 控制台 RFC（v1 已实现） |
 
 ## Privacy
 
