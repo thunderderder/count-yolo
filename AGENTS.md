@@ -40,7 +40,7 @@ python -m pytest tests/ -q
 2. 频繁小 commit，不要把文档、搬家、测通混成一次提交。
 3. 公开文件禁止本机绝对路径、真实邮箱、真实手机号、内部服务器、1Password 引用。计数 JSON 只写文件名，不写盘符路径。
 4. 示例视频只验 L1。不要用它宣称 L3 全矩阵可用。
-5. 对向 / 潮汐车道靠 `require_motion_direction`，不要靠收窄 x 裁线。
+5. 对向 / 潮汐车道靠 `require_motion_direction`，不要靠收窄 x 裁线。运动阈值在 `geometry.py`（拥堵慢车已放宽，2026-09-02）。
 6. CI 只跑离线单测。不要把 ultralytics / torch 塞进默认 `dev` 依赖。
 
 ## 兼容入口（勿删）

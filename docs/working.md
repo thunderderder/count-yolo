@@ -2,6 +2,10 @@
 
 ## Changelog
 
+### 2026-09-02
+
+- 修复拥堵慢车过线漏计：`motion_matches_direction` 阈值从 -6/-1 放宽为 -1.5/-0.25 + 步长多数表决；`crossed_line` 改为侧向穿越判定（压线慢移不再漏触发）
+
 ### 2026-09-01
 
 - 定稿本地 Web 控制台 RFC：`docs/rfc_local_console.md`（job 两层配置、全片三分路 debug、标定 10s 预览片）

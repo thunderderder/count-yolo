@@ -81,7 +81,25 @@ device: auto
 .\run.ps1 serve
 ```
 
-浏览器 http://127.0.0.1:8765 ：建 Job、Web 触发标定（本机 OpenCV）、试跑 30s / 全片计数、本机打开输出文件。设计见 [`rfc_local_console.md`](rfc_local_console.md)。
+浏览器 http://127.0.0.1:8765 ：建 Job、Web 触发标定（本机 OpenCV）、试跑 30s / 全片计数、**停止**、本机打开输出文件。设计见 [`rfc_local_console.md`](rfc_local_console.md)。
+
+**标定落盘**：坐标写入 `configs/<场景>.json`；重启 `serve` **不用重画线**。任务进行中点 **停止**（「试跑」旁）。
+
+---
+
+## config 里 `line_counting` 字段
+
+| 字段 | 层 | 说明 |
+|------|-----|------|
+| `line` | 几何 | `[[x1,y1],[x2,y2]]` 计数线端点 |
+| `direction` | 几何+运动 | `near_to_far`（y 减小）或 `far_to_near`；穿线方向与运动过滤共用 |
+| `x_min` / `x_max` | 几何 | 可选，限制这条线只管哪个横向车道 |
+| `require_motion_direction` | 运动 | 默认 `true`；过线后再验轨迹方向，挡对向潮汐 |
+| `maps_to` | 统计 | 写入 JSON 的进口/转向键，不参与判定 |
+
+计数流程：**几何穿线** →（若 `require_motion_direction`）**运动方向** → +1。两道都写在同一条线配置里，但不是一回事。
+
+拥堵慢车若大量过线不计：2026-09-02 起运动阈值已放宽（`dy_total < -1.5` 等）；仍漏可对该线试 `require_motion_direction: false` 对比（会放宽，可能多计对向）。**不要用收窄 x 代替运动过滤。**
 
 ---
 
@@ -105,5 +123,7 @@ device: auto
 | 跑错视频 | 看命令行 `video:` 行；确认 `--job` 指向的文件 |
 | PowerShell `--lines` | 逗号列表须加引号：`"L1_主路,L1_匝道"` |
 | 以为 Web 能判断准不准 | 用 `compare` + GT，见 `ground_truth/` |
+| 慢车过线不计 | 运动过滤过严 | 已放宽阈值；重跑试跑；或试关 `require_motion_direction` |
+| 重启 serve 后要不要重画 | 标定在 config 文件 | **不用** |
 
 计数 JSON 只保存**视频文件名**（无盘符）。本机绝对路径只出现在 job / `.env`（gitignore）。

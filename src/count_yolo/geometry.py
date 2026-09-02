@@ -3,8 +3,30 @@ from __future__ import annotations
 import numpy as np
 
 
-def motion_matches_direction(cy_hist: list[float], direction: str, min_points: int = 5) -> bool:
-    """近期轨迹是否与过线方向一致。near_to_far = 画面向上（y 变小）。"""
+def is_before_line(cy: float, line_y: float, direction: str) -> bool:
+    """过线前的一侧：near_to_far 为线下方（y 较大）。"""
+    if direction == "near_to_far":
+        return cy > line_y
+    if direction == "far_to_near":
+        return cy < line_y
+    return False
+
+
+def crossing_transition(last_cy: float, cy: float, line_y: float, direction: str) -> bool:
+    """轨迹从过线前一侧进入另一侧（比逐帧比较更耐慢速/压线）。"""
+    return is_before_line(last_cy, line_y, direction) and not is_before_line(cy, line_y, direction)
+
+
+def crossed_line(last_cy: float, cy: float, line_y: float, direction: str) -> bool:
+    return crossing_transition(last_cy, cy, line_y, direction)
+
+
+def motion_matches_direction(cy_hist: list[float], direction: str, min_points: int = 3) -> bool:
+    """近期轨迹是否与过线方向一致。near_to_far = 画面向上（y 变小）。
+
+    阈值刻意放低，避免拥堵慢车每帧位移 <1px 时在过线窗口内永远过不了运动过滤。
+    仍用总位移符号 + 步长中位数/多数表决挡对向潮汐。
+    """
     if len(cy_hist) < min_points:
         return False
     dy_total = cy_hist[-1] - cy_hist[0]
@@ -14,9 +36,11 @@ def motion_matches_direction(cy_hist: list[float], direction: str, min_points: i
         return False
     dy_med = float(np.median(partial))
     if direction == "near_to_far":
-        return dy_total < -6.0 and dy_med < -1.0
+        correct = sum(1 for d in partial if d < 0)
+        return dy_total < -1.5 and (dy_med < -0.25 or correct >= max(2, (len(partial) + 1) // 2))
     if direction == "far_to_near":
-        return dy_total > 6.0 and dy_med > 1.0
+        correct = sum(1 for d in partial if d > 0)
+        return dy_total > 1.5 and (dy_med > 0.25 or correct >= max(2, (len(partial) + 1) // 2))
     return False
 
 
@@ -40,11 +64,3 @@ def point_in_polygon(x: float, y: float, polygon: list[list[float]]) -> bool:
             inside = not inside
         j = i
     return inside
-
-
-def crossed_line(last_cy: float, cy: float, line_y: float, direction: str) -> bool:
-    if direction == "near_to_far":
-        return last_cy > line_y >= cy
-    if direction == "far_to_near":
-        return last_cy < line_y <= cy
-    return False
