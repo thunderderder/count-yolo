@@ -35,6 +35,8 @@
     .steps { margin:8px 0 0; padding-left:18px; }
     .steps li { margin:6px 0; }
     .hidden { display:none !important; }
+    .field-hint { margin:-2px 0 10px; font-size:11px; line-height:1.45; color:var(--muted); }
+    .field-hint strong { color:#c5d0de; font-weight:600; }
     @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -90,29 +92,62 @@
 
       <details id="trackPanel" style="margin-top:12px;">
         <summary style="cursor:pointer; color:var(--muted); font-size:13px;">检测与跟踪（遮挡丢 ID 时调这里）</summary>
-        <p class="muted" style="margin:8px 0;">
-          ByteTrack 参数。遮挡后 ID 丢失时优先加大 <code>track_buffer</code>、略降 <code>conf</code> / <code>track_low_thresh</code>；<code>vid_stride</code> 请保持 1。
+        <p class="muted" style="margin:8px 0; line-height:1.5;">
+          视频里每辆车有一个<strong>跟踪 ID</strong>（debug 视频绿框上的数字）。车被挡住、框消失几帧后，若 ByteTrack 等太久就会丢掉旧 ID，再出现时常变成新 ID——未过线的车可能漏计。
+          下面参数分两类：<strong>检测</strong>（YOLO 能不能框到车）和<strong>跟踪</strong>（框消失后 ID 能不能接上）。
         </p>
         <div class="row" style="margin-bottom:8px;">
           <button type="button" id="btnTrackDefault" class="secondary">恢复默认</button>
           <button type="button" id="btnTrackOcclusion" class="secondary">抗遮挡预设</button>
         </div>
+
+        <p class="muted" style="margin:12px 0 6px; font-size:12px; font-weight:600; color:#c5d0de;">检测（YOLO）</p>
+
         <label>检测置信度 conf</label>
+        <p class="field-hint"><strong>是什么：</strong>只有得分 ≥ 此值的检测框才会参与跟踪。<br>
+        <strong>怎么调：</strong>遮挡、漏检多时<strong>略降</strong>（如 0.25→0.2→0.15），让「露出一半的车」也能被框到；降太多会增加误检和杂框。</p>
         <input id="conf" type="number" min="0.05" max="0.95" step="0.01" value="0.25" />
-        <label>NMS IoU</label>
+
+        <label>NMS 重叠阈值 iou</label>
+        <p class="field-hint"><strong>是什么：</strong>两个框重叠超过此比例时，去掉得分较低的那个（去重）。<br>
+        <strong>怎么调：</strong>一般保持 0.7。拥堵贴在一起时略<strong>升高</strong>可少删框，但可能同一辆车留两个框。</p>
         <input id="iou" type="number" min="0.1" max="0.95" step="0.01" value="0.7" />
-        <label>跳帧 vid_stride（遮挡场景用 1）</label>
+
+        <label>跳帧 vid_stride</label>
+        <p class="field-hint"><strong>是什么：</strong>每隔 N 帧才做一次检测（1=每帧都检测）。<br>
+        <strong>怎么调：</strong>遮挡、跟丢 ID 时务必保持 <strong>1</strong>。设为 2 以上会跳帧，车移动幅度变大，更容易断轨；仅全片太慢、且场景简单时可试 2。</p>
         <input id="vidStride" type="number" min="1" max="10" step="1" value="1" />
+
+        <p class="muted" style="margin:12px 0 6px; font-size:12px; font-weight:600; color:#c5d0de;">跟踪（ByteTrack）</p>
+
         <label>丢失缓冲 track_buffer（帧）</label>
+        <p class="field-hint"><strong>是什么：</strong>检测框消失后，仍把这条轨迹「挂着」等它回来的最长帧数。超过就彻底丢掉旧 ID。<br>
+        <strong>怎么调：</strong>遮挡丢 ID 时<strong>优先加大</strong>（默认 30 → 试 60、90、120）。越大越能扛遮挡，但车真的离开画面后，旧 ID 占得更久，偶发误关联风险略升。</p>
         <input id="trackBuffer" type="number" min="5" max="300" step="1" value="30" />
+
         <label>关联阈值 match_thresh</label>
+        <p class="field-hint"><strong>是什么：</strong>重现的框与「挂着」的旧轨迹，位置要有多像（IoU）才算同一条车。<br>
+        <strong>怎么调：</strong>车从遮挡里出来时框位偏了、接不上旧 ID 时，可<strong>略降</strong>（0.8→0.75→0.7）；太低会把相邻两辆车误并成一条。</p>
         <input id="matchThresh" type="number" min="0.1" max="0.99" step="0.01" value="0.8" />
+
         <label>低分检测阈值 track_low_thresh</label>
+        <p class="field-hint"><strong>是什么：</strong>ByteTrack 第二阶段：用「不太自信」的检测框去尝试接回已丢失的轨迹（遮挡恢复靠这个）。<br>
+        <strong>怎么调：</strong>遮挡后 ID 经常断时<strong>略降</strong>（0.1→0.05）；太低可能用噪声框错误续轨。</p>
         <input id="trackLowThresh" type="number" min="0.01" max="0.5" step="0.01" value="0.1" />
+
         <label>高分匹配 track_high_thresh</label>
+        <p class="field-hint"><strong>是什么：</strong>第一阶段：多自信的检测框才参与和现有轨迹的匹配。<br>
+        <strong>怎么调：</strong>一般保持 0.25。杂框、误跟踪太多时可<strong>略升</strong>；与 conf 配合，通常先动 conf 和 track_buffer。</p>
         <input id="trackHighThresh" type="number" min="0.05" max="0.95" step="0.01" value="0.25" />
+
         <label>新轨迹阈值 new_track_thresh</label>
+        <p class="field-hint"><strong>是什么：</strong>检测框得分达到此值、又匹配不上任何旧轨迹时，才新开一个 ID。<br>
+        <strong>怎么调：</strong>一般保持 0.25。路边静态物被当成车、ID 乱跳时可<strong>略升</strong>；真正新车进画面晚出现时可略降（慎用）。</p>
         <input id="newTrackThresh" type="number" min="0.05" max="0.95" step="0.01" value="0.25" />
+
+        <p class="field-hint" style="margin-top:4px;">
+          <strong>建议调试顺序：</strong>① 抗遮挡预设 → 保存 Job → 试跑 30s → 看 debug 里 ID 是否更连贯 → ② 仍断 ID 则继续加大 track_buffer → ③ 仍漏检框则略降 conf / track_low_thresh。改完务必保存 Job。
+        </p>
       </details>
 
       <label>备注 note</label>
