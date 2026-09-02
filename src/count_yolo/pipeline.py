@@ -10,6 +10,7 @@ import numpy as np
 
 from count_yolo.classify import map_vehicle_class, resolve_vehicle_class_ids
 from count_yolo.geometry import crossed_line, motion_matches_direction, point_in_polygon
+from count_yolo.motion import MotionSettings
 from count_yolo.paths import default_model
 from count_yolo.summary import build_summary
 
@@ -104,20 +105,24 @@ class MultiLineTrackState:
     counted_lines: set[str] = field(default_factory=set)
 
 
-def _parse_line_cfg(line_cfg: dict[str, Any]) -> dict[str, Any]:
+def _parse_line_cfg(line_cfg: dict[str, Any], motion_settings: MotionSettings | None = None) -> dict[str, Any]:
     (x1, y1), (x2, y2) = line_cfg["line"]
     x_min, x_max = min(x1, x2), max(x1, x2)
     if "x_min" in line_cfg:
         x_min = max(x_min, float(line_cfg["x_min"]))
     if "x_max" in line_cfg:
         x_max = min(x_max, float(line_cfg["x_max"]))
+    if motion_settings is not None:
+        require_motion = motion_settings.line_requires_motion(line_cfg)
+    else:
+        require_motion = bool(line_cfg.get("require_motion_direction", True))
     return {
         "line": line_cfg["line"],
         "line_y": (y1 + y2) / 2,
         "x_min": x_min,
         "x_max": x_max,
         "direction": line_cfg.get("direction", "near_to_far"),
-        "require_motion": bool(line_cfg.get("require_motion_direction", True)),
+        "require_motion": require_motion,
         "maps_to": line_cfg["maps_to"],
         "evaluation_level": line_cfg.get("evaluation_level", "L1"),
     }
@@ -195,6 +200,7 @@ def count_lines_traffic(
     device: str,
     iou: float = 0.7,
     tracker_yaml: str | Path | None = None,
+    motion_settings: MotionSettings | None = None,
     separate_passes: bool = False,
     per_line_debug: bool = False,
     debug_show_class: bool = False,
@@ -218,6 +224,7 @@ def count_lines_traffic(
                     device=device,
                     iou=iou,
                     tracker_yaml=tracker_yaml,
+                    motion_settings=motion_settings,
                 )
             )
         combined = {
@@ -244,7 +251,7 @@ def count_lines_traffic(
         line_cfg = config.get("line_counting", {}).get(line_name)
         if not line_cfg:
             raise KeyError(f"line_counting.{line_name} not in config")
-        parsed_lines[line_name] = _parse_line_cfg(line_cfg)
+        parsed_lines[line_name] = _parse_line_cfg(line_cfg, motion_settings)
 
     fps, width, height, start_frame, end_frame = _video_window(video, start_sec, end_sec)
     frame_area = width * height
@@ -339,7 +346,9 @@ def count_lines_traffic(
                         continue
                     direction = line_info["direction"]
                     if crossed_line(state.last_cy, cy, line_info["line_y"], direction):
-                        if (not line_info["require_motion"]) or motion_matches_direction(state.cy_hist, direction):
+                        if (not line_info["require_motion"]) or motion_matches_direction(
+                            state.cy_hist, direction, motion_settings
+                        ):
                             maps_to = line_info["maps_to"]
                             key = f"{maps_to['entry']}|{maps_to['movement']}"
                             counts_by_line[line_name][key][state.vehicle_class] += 1
@@ -468,6 +477,7 @@ def count_line_traffic(
     device: str,
     iou: float = 0.7,
     tracker_yaml: str | Path | None = None,
+    motion_settings: MotionSettings | None = None,
 ) -> dict[str, Any]:
     from ultralytics import YOLO
 
@@ -476,16 +486,13 @@ def count_line_traffic(
     if not line_cfg:
         raise KeyError(f"line_counting.{line_name} not in config")
 
-    (x1, y1), (x2, y2) = line_cfg["line"]
-    line_y = (y1 + y2) / 2
-    x_min, x_max = min(x1, x2), max(x1, x2)
-    if "x_min" in line_cfg:
-        x_min = max(x_min, float(line_cfg["x_min"]))
-    if "x_max" in line_cfg:
-        x_max = min(x_max, float(line_cfg["x_max"]))
-    direction = line_cfg.get("direction", "near_to_far")
-    maps_to = line_cfg["maps_to"]
-    require_motion = bool(line_cfg.get("require_motion_direction", True))
+    parsed = _parse_line_cfg(line_cfg, motion_settings)
+    (x1, y1), (x2, y2) = parsed["line"]
+    line_y = parsed["line_y"]
+    x_min, x_max = parsed["x_min"], parsed["x_max"]
+    direction = parsed["direction"]
+    maps_to = parsed["maps_to"]
+    require_motion = parsed["require_motion"]
 
     fps, width, height, start_frame, end_frame = _video_window(video, start_sec, end_sec)
     frame_area = width * height
@@ -555,7 +562,9 @@ def count_line_traffic(
 
             if state.last_cy is not None and not state.counted:
                 if crossed_line(state.last_cy, cy, line_y, direction):
-                    if (not require_motion) or motion_matches_direction(state.cy_hist, direction):
+                    if (not require_motion) or motion_matches_direction(
+                        state.cy_hist, direction, motion_settings
+                    ):
                         counts[key][state.vehicle_class] += 1
                         state.counted = True
 

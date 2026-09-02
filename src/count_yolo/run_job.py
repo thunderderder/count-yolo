@@ -13,6 +13,7 @@ from count_yolo.jobs import (
 )
 from count_yolo.paths import PROJECT_ROOT
 from count_yolo.pipeline import count_lines_traffic, load_config
+from count_yolo.motion import MotionSettings
 from count_yolo.timeparse import resolve_device
 from count_yolo.tracking import TrackSettings
 
@@ -48,6 +49,7 @@ def run_job(
     device = resolve_device(job.device)
     start_sec, end_sec = resolve_count_window(job)
     track = TrackSettings.from_job_fields(job)
+    motion = MotionSettings.from_job_fields(job)
     if conf is not None:
         track.conf = conf
     if vid_stride is not None:
@@ -62,6 +64,8 @@ def run_job(
     print(f"device: {device}", flush=True)
     for line in track.summary_lines():
         print(f"track: {line}", flush=True)
+    for line in motion.summary_lines():
+        print(f"motion: {line}", flush=True)
     print(f"tracker_yaml: {tracker_yaml.relative_to(PROJECT_ROOT).as_posix()}", flush=True)
     if job.preview_seconds:
         print(f"preview_run: {job.preview_seconds}s (start={start_sec}, end={end_sec})", flush=True)
@@ -87,6 +91,7 @@ def run_job(
         device=device,
         iou=track.iou,
         tracker_yaml=tracker_yaml,
+        motion_settings=motion,
         per_line_debug=True,
     )
 
@@ -113,6 +118,7 @@ def run_job(
             device=device,
             iou=track.iou,
             tracker_yaml=tracker_yaml,
+            motion_settings=motion,
             per_line_debug=True,
             debug_show_class=True,
         )

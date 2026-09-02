@@ -52,3 +52,9 @@ note: ""
 # new_track_thresh: 0.25
 # match_thresh: 0.8
 # fuse_score: true
+
+# --- 运动过滤（Web「运动过滤」面板；过线方向，挡对向）---
+# require_motion_direction: true
+# motion_min_points: 3
+# motion_min_dy_total: 1.5
+# motion_min_dy_med: 0.25

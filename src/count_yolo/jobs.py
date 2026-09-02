@@ -35,6 +35,10 @@ class Job:
     new_track_thresh: float = 0.25
     match_thresh: float = 0.8
     fuse_score: bool = True
+    require_motion_direction: bool = True
+    motion_min_points: int = 3
+    motion_min_dy_total: float = 1.5
+    motion_min_dy_med: float = 0.25
 
     def to_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {
@@ -67,6 +71,10 @@ class Job:
                 "new_track_thresh": self.new_track_thresh,
                 "match_thresh": self.match_thresh,
                 "fuse_score": self.fuse_score,
+                "require_motion_direction": self.require_motion_direction,
+                "motion_min_points": self.motion_min_points,
+                "motion_min_dy_total": self.motion_min_dy_total,
+                "motion_min_dy_med": self.motion_min_dy_med,
             }
         )
         return data
@@ -99,6 +107,10 @@ class Job:
             new_track_thresh=float(data.get("new_track_thresh", 0.25) or 0.25),
             match_thresh=float(data.get("match_thresh", 0.8) or 0.8),
             fuse_score=bool(data.get("fuse_score", True)),
+            require_motion_direction=bool(data.get("require_motion_direction", True)),
+            motion_min_points=int(data.get("motion_min_points", 3) or 3),
+            motion_min_dy_total=float(data.get("motion_min_dy_total", 1.5) or 1.5),
+            motion_min_dy_med=float(data.get("motion_min_dy_med", 0.25) or 0.25),
         )
 
 

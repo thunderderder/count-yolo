@@ -150,6 +150,44 @@
         </p>
       </details>
 
+      <details id="motionPanel" style="margin-top:12px;">
+        <summary style="cursor:pointer; color:var(--muted); font-size:13px;">运动过滤（过线后方向判定）</summary>
+        <p class="muted" style="margin:8px 0; line-height:1.5;">
+          过线计数分两步：① 中心点穿过黄线（几何）→ ② 近几帧是否朝正确方向移动（运动过滤，挡对向/潮汐）。
+          拥堵慢车若<strong>过了线仍是绿框、不变橙 OK</strong>，多半是运动过滤太严，可试「慢车更宽松」或略降下方阈值。
+        </p>
+        <div class="row" style="margin-bottom:8px;">
+          <button type="button" id="btnMotionDefault" class="secondary">恢复默认</button>
+          <button type="button" id="btnMotionSlow" class="secondary">慢车更宽松</button>
+          <button type="button" id="btnMotionOff" class="secondary">关闭运动过滤</button>
+        </div>
+
+        <label>
+          <input type="checkbox" id="requireMotion" style="width:auto; margin-right:8px;" checked />
+          启用运动方向过滤（关 = 只要几何过线就计数，对向车也可能计入）
+        </label>
+        <p class="field-hint">有对向/潮汐车道时<strong>建议保持开启</strong>。仅单向、无对向时可关掉做对比试跑。</p>
+
+        <label>最少历史帧数 motion_min_points</label>
+        <p class="field-hint"><strong>是什么：</strong>判断方向前，轨迹至少要积累多少帧的 y 坐标。<br>
+        <strong>怎么调：</strong>慢车、刚出现就过线时可<strong>降到 2</strong>；太低可能对瞬时噪声过敏。</p>
+        <input id="motionMinPoints" type="number" min="2" max="16" step="1" value="3" />
+
+        <label>总位移阈值 motion_min_dy_total（像素）</label>
+        <p class="field-hint"><strong>是什么：</strong>过线前后几帧，中心点沿行驶方向至少要移动多少像素（near_to_far = 向上即 y 减小）。<br>
+        <strong>怎么调：</strong>拥堵慢车漏计时<strong>略降</strong>（1.5→1.0→0.8）。旧版约 6 像素，现已默认 1.5。</p>
+        <input id="motionMinDyTotal" type="number" min="0.3" max="20" step="0.1" value="1.5" />
+
+        <label>步长中位阈值 motion_min_dy_med（像素/步）</label>
+        <p class="field-hint"><strong>是什么：</strong>相邻采样点之间 y 位移的中位数门槛；或多数步长方向正确也可通过。<br>
+        <strong>怎么调：</strong>每帧只挪零点几像素的慢车，可<strong>降到 0.15 或 0.1</strong>。旧版约 1.0，现已默认 0.25。</p>
+        <input id="motionMinDyMed" type="number" min="0.05" max="3" step="0.05" value="0.25" />
+
+        <p class="field-hint" style="margin-top:4px;">
+          <strong>说明：</strong>断面行驶方向由 config 里 <code>direction</code>（标定时写入，通常 near_to_far）决定，此处只调「多严」。与上方「检测与跟踪」无关。
+        </p>
+      </details>
+
       <label>备注 note</label>
       <textarea id="note"></textarea>
 
@@ -242,6 +280,27 @@
       fuse_score: true,
     };
 
+    const MOTION_DEFAULTS = {
+      require_motion_direction: true,
+      motion_min_points: 3,
+      motion_min_dy_total: 1.5,
+      motion_min_dy_med: 0.25,
+    };
+
+    const MOTION_SLOW = {
+      require_motion_direction: true,
+      motion_min_points: 2,
+      motion_min_dy_total: 1.0,
+      motion_min_dy_med: 0.15,
+    };
+
+    const MOTION_OFF = {
+      require_motion_direction: false,
+      motion_min_points: 3,
+      motion_min_dy_total: 1.5,
+      motion_min_dy_med: 0.25,
+    };
+
     function fillTrackForm(values) {
       $("conf").value = values.conf;
       $("iou").value = values.iou;
@@ -278,6 +337,31 @@
         new_track_thresh: job.new_track_thresh ?? TRACK_DEFAULTS.new_track_thresh,
         match_thresh: job.match_thresh ?? TRACK_DEFAULTS.match_thresh,
         fuse_score: job.fuse_score ?? true,
+      };
+    }
+
+    function fillMotionForm(values) {
+      $("requireMotion").checked = !!values.require_motion_direction;
+      $("motionMinPoints").value = values.motion_min_points;
+      $("motionMinDyTotal").value = values.motion_min_dy_total;
+      $("motionMinDyMed").value = values.motion_min_dy_med;
+    }
+
+    function readMotionForm() {
+      return {
+        require_motion_direction: $("requireMotion").checked,
+        motion_min_points: parseInt($("motionMinPoints").value, 10),
+        motion_min_dy_total: parseFloat($("motionMinDyTotal").value),
+        motion_min_dy_med: parseFloat($("motionMinDyMed").value),
+      };
+    }
+
+    function motionFormFromJob(job) {
+      return {
+        require_motion_direction: job.require_motion_direction ?? MOTION_DEFAULTS.require_motion_direction,
+        motion_min_points: job.motion_min_points ?? MOTION_DEFAULTS.motion_min_points,
+        motion_min_dy_total: job.motion_min_dy_total ?? MOTION_DEFAULTS.motion_min_dy_total,
+        motion_min_dy_med: job.motion_min_dy_med ?? MOTION_DEFAULTS.motion_min_dy_med,
       };
     }
 
@@ -428,6 +512,7 @@
       $("preview30s").checked = job.preview_seconds != null && job.preview_seconds > 0;
       $("note").value = job.note || "";
       fillTrackForm(trackFormFromJob(job));
+      fillMotionForm(motionFormFromJob(job));
       if (job.lines && job.lines.length) {
         $("lineNames").value = job.lines.join(",");
       }
@@ -522,6 +607,7 @@
         preview_seconds: previewSecondsValue(),
         note: $("note").value.trim(),
         ...readTrackForm(),
+        ...readMotionForm(),
       };
       await api(`/api/jobs/${encodeURIComponent(id)}`, {
         method: "PUT",
@@ -701,6 +787,9 @@
     $("ebikeEnabled").addEventListener("change", updateCliHint);
     $("btnTrackDefault").addEventListener("click", () => fillTrackForm(TRACK_DEFAULTS));
     $("btnTrackOcclusion").addEventListener("click", () => fillTrackForm(TRACK_OCCLUSION));
+    $("btnMotionDefault").addEventListener("click", () => fillMotionForm(MOTION_DEFAULTS));
+    $("btnMotionSlow").addEventListener("click", () => fillMotionForm(MOTION_SLOW));
+    $("btnMotionOff").addEventListener("click", () => fillMotionForm(MOTION_OFF));
     $("video").addEventListener("input", () => { updateCliHint(); updateRunState(lineCountCache); });
     $("config").addEventListener("input", updateCliHint);
     $("btnNew").addEventListener("click", async () => {
@@ -720,6 +809,7 @@
           preview_seconds: 30,
           note: "",
           ...TRACK_DEFAULTS,
+          ...MOTION_DEFAULTS,
         }),
       });
       await loadJobs();

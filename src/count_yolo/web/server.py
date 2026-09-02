@@ -70,6 +70,10 @@ class JobPayload(BaseModel):
     new_track_thresh: float = 0.25
     match_thresh: float = 0.8
     fuse_score: bool = True
+    require_motion_direction: bool = True
+    motion_min_points: int = 3
+    motion_min_dy_total: float = 1.5
+    motion_min_dy_med: float = 0.25
 
 
 class AnnotatePayload(BaseModel):
